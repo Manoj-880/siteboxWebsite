@@ -1,0 +1,31 @@
+/* Staff page – card grid and StaffCard */
+
+.staff-card {
+  border-radius: 12px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.staff-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.staff-card__name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--sitex-text-primary, #1c1f24);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--sitex-border-gray, #e5e7eb);
+}
+
+.staff-card__list {
+  color: var(--sitex-text-primary, #1c1f24);
+}
+
+.staff-card__list .text-muted {
+  min-width: 4.5rem;
+  color: var(--sitex-text-muted, #4a5565);
+}
+
+.staff-card__list .text-break {
+  word-break: break-word;
+}

@@ -1,0 +1,38 @@
+.materials-list {
+  max-height: 380px;
+  overflow: auto;
+}
+
+.materials-column-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6c757d;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.materials-icon-btn {
+  text-decoration: none !important;
+  padding: 0.15rem 0.35rem;
+  line-height: 1;
+  font-size: 0.95rem;
+  color: #1f3d8a !important;
+  background: rgba(13, 110, 253, 0.14) !important;
+  border-radius: 6px;
+}
+
+.materials-icon-btn:hover {
+  color: #0d6efd !important;
+  background: rgba(13, 110, 253, 0.22) !important;
+}
+
+.admin-materials .list-group-item.active {
+  background: rgba(13, 110, 253, 0.18) !important;
+  border-color: rgba(13, 110, 253, 0.38) !important;
+  color: #0a3d9a !important;
+}
+
+.admin-materials .list-group-item.active span {
+  color: inherit !important;
+}
