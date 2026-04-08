@@ -33,6 +33,18 @@ function formatAttendance(status) {
   return { label: status, variant: 'secondary' };
 }
 
+function toNumber(val) {
+  const n = Number(val);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatAmount(val) {
+  return toNumber(val).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 const iconStyle = { width: 18, height: 18, flexShrink: 0 };
 const IconPerson = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={iconStyle} aria-hidden>
@@ -225,9 +237,23 @@ export default function AdminSiteDetails() {
   const siteStatuses = site.site_statuses || [];
   const contractors = site.contractors || [];
   const progressPercent = siteStatuses.length > 0 ? Math.min(100, (siteStatuses.filter((s) => s.record_status === 'active').length / Math.max(siteStatuses.length, 1)) * 100) : 0;
-  const budgetNum = parseFloat(String(site.budget || '0').replace(/,/g, ''), 10);
-  const usedNum = Number(site.used) || 0;
-  const budgetProgressPercent = budgetNum > 0 ? Math.min(100, (usedNum / budgetNum) * 100) : 0;
+  const budgetNum = parseFloat(String(site.budget || '0').replace(/,/g, '')) || 0;
+  const budgetInfo = site.budgetinfo || site.budgetinfor || {};
+  const materialsSpent = toNumber(budgetInfo.materials);
+  const contractorSpent = toNumber(budgetInfo.contractors);
+  const miscSpent = toNumber(budgetInfo.miscellaneous);
+  const totalSpendings = toNumber(budgetInfo.total_spendings);
+  const receivedPayment = toNumber(site?.stats?.transactions?.recieved);
+  const usedNum = totalSpendings;
+
+  const budgetParts = [
+    { key: 'materials', label: 'Materials', value: materialsSpent, color: '#5ca9e6' },
+    { key: 'contractors', label: 'Contractor', value: contractorSpent, color: '#d39b67' },
+    { key: 'misc', label: 'Miscellaneous expenses', value: miscSpent, color: '#8f88c9' },
+    { key: 'total', label: 'Total Spendings', value: totalSpendings, color: '#1f66c9' },
+    { key: 'received', label: 'Received payment', value: receivedPayment, color: '#58c3b6' },
+  ];
+  const budgetPartsTotal = budgetParts.reduce((sum, p) => sum + toNumber(p.value), 0);
 
   const backPath = isAdmin ? '/admin/sites' : '/supervisor/sites';
   const assignedContractorIds = contractors.map((c) => c.contractor_id);
@@ -349,23 +375,36 @@ export default function AdminSiteDetails() {
           <Card.Header>
             <Card.Title className="mb-0">Budget info</Card.Title>
           </Card.Header>
-          <Card.Body>
-            <Row className="align-items-end">
-              <Col xs={6} md={4} className="budget-row">
-                <div className="budget-label">Used</div>
-                <div className="budget-value">{site.used ?? 0} <span className="small text-muted fw-normal">(dummy)</span></div>
-              </Col>
-              <Col xs={6} md={4} className="budget-row">
-                <div className="budget-label">Budget</div>
-                <div className="budget-value">{site.budget ?? '—'}</div>
-              </Col>
-              <Col xs={6} md={4} className="budget-row">
-                <div className="budget-label">Paid</div>
-                <div className="budget-value">{site.paid ?? 0} <span className="small text-muted fw-normal">(dummy)</span></div>
-              </Col>
-            </Row>
-            <div className="budget-progress">
-              <ProgressBar now={budgetProgressPercent} variant="primary" className="mb-0 h-100" />
+          <Card.Body className="budget-info-body">
+            <div className="budget-topline">
+              <div className="budget-topline-item">USED: {formatAmount(usedNum)}</div>
+              <div className="budget-topline-item">BUDGET: {formatAmount(budgetNum)}</div>
+            </div>
+
+            <div className="budget-segments">
+              {budgetParts.map((part) => {
+                const width = budgetPartsTotal > 0 ? (toNumber(part.value) / budgetPartsTotal) * 100 : 0;
+                return (
+                  <div
+                    key={part.key}
+                    className="budget-segment"
+                    style={{
+                      backgroundColor: part.color,
+                      width: `${width}%`,
+                    }}
+                    title={`${part.label}: ${formatAmount(part.value)}`}
+                  />
+                );
+              })}
+            </div>
+
+            <div className="budget-legend">
+              {budgetParts.map((part) => (
+                <div className="budget-legend-item" key={part.key}>
+                  <span className="budget-legend-dot" style={{ backgroundColor: part.color }} />
+                  <span>{part.label} {Math.round(toNumber(part.value) / 1000)}k</span>
+                </div>
+              ))}
             </div>
           </Card.Body>
         </Card>
