@@ -1,359 +1,216 @@
-import { useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Breadcrumb,
-  Button,
-  Card,
-  Col,
-  Form,
-  ListGroup,
-  Modal,
-  Row,
-  Spinner,
-} from 'react-bootstrap';
-import { adminApi } from '../../api/axiosConfig';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Button, Col, Form, Modal, Row, Spinner } from 'react-bootstrap';
+import { adminApi, superAdminApi } from '../../api/axiosConfig';
 import { useAuth } from '../../context/AuthContext';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs';
 import './Materials.css';
 
-const blankCategoryForm = { name: '' };
-const blankMaterialForm = {
-  material_name: '',
-  material_description: '',
-  unit_id: '',
-  vendor_user_ids: [],
-  brandsText: '',
-  finishingsText: '',
-  thicknessesText: '',
-};
+const BRAND_ACCENT_PALETTE = ['#c92a2a', '#e67700', '#2b8a3e', '#1864ab', '#5f3dc4', '#a61e4d', '#0b7285'];
 
-const parseCommaList = (value) =>
-  String(value || '')
-    .split(',')
-    .map((v) => v.trim())
-    .filter(Boolean);
-
-function hydrateMaterialForm(material) {
-  return {
-    material_name: material?.material_name || '',
-    material_description: material?.material_description || '',
-    unit_id: material?.unit_id ? String(material.unit_id) : '',
-    brandsText: (material?.brands || []).map((b) => b?.brand?.name).filter(Boolean).join(', '),
-    finishingsText: (material?.finishings || []).map((f) => f?.finishing?.name).filter(Boolean).join(', '),
-    thicknessesText: (material?.thicknesses || []).map((t) => t?.thickness?.label).filter(Boolean).join(', '),
-  };
+function brandAccentColor(name) {
+  const s = String(name || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i += 1) h = (h + s.charCodeAt(i) * (i + 1)) % 997;
+  return BRAND_ACCENT_PALETTE[h % BRAND_ACCENT_PALETTE.length];
 }
 
 export default function AdminMaterials() {
   const { user } = useAuth();
   const adminId = user?.id;
 
-  const [categories, setCategories] = useState([]);
-  const [units, setUnits] = useState([]);
-  const [materials, setMaterials] = useState([]);
-  const [vendors, setVendors] = useState([]);
-  const [materialSuppliers, setMaterialSuppliers] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [selectedMaterial, setSelectedMaterial] = useState(null);
-
-  const [loading, setLoading] = useState(true);
-  const [loadingMaterials, setLoadingMaterials] = useState(false);
+  const [materialTree, setMaterialTree] = useState([]);
+  const [loadingMats, setLoadingMats] = useState(false);
   const [error, setError] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showMaterialModal, setShowMaterialModal] = useState(false);
-  const [isEditingCategory, setIsEditingCategory] = useState(false);
-  const [isEditingMaterial, setIsEditingMaterial] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [categoryForm, setCategoryForm] = useState(blankCategoryForm);
-  const [materialForm, setMaterialForm] = useState(blankMaterialForm);
-  const [newBrand, setNewBrand] = useState('');
-  const [newFinishing, setNewFinishing] = useState('');
-  const [newThickness, setNewThickness] = useState('');
-  const [newSupplierId, setNewSupplierId] = useState('');
-
-  const selectedMaterialDetails = useMemo(() => {
-    if (!selectedMaterial) return null;
-    return materials.find((m) => m.id === selectedMaterial.id) || selectedMaterial;
-  }, [materials, selectedMaterial]);
-
-  const loadCategoriesAndUnits = async () => {
-    if (!adminId) return;
-    setLoading(true);
-    setError('');
-    try {
-      const [categoriesRes, unitsRes] = await Promise.all([
-        adminApi.getCategories(adminId),
-        adminApi.getUnits(adminId),
-      ]);
-      const vendorsRes = await adminApi.getEmployeesWeb(6);
-      const nextCategories = categoriesRes.data?.data?.categories || [];
-      const nextUnits = unitsRes.data?.data?.units || [];
-      const nextVendors = vendorsRes.data?.data || [];
-      setCategories(nextCategories);
-      setUnits(nextUnits);
-      setVendors(nextVendors);
-
-      setSelectedCategory((prev) => nextCategories.find((c) => c.id === prev?.id) || null);
-      setSelectedMaterial((prev) => prev || null);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load categories/units');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadSuppliersByMaterial = async (materialId) => {
-    if (!adminId || !materialId) {
-      setMaterialSuppliers([]);
-      return;
-    }
-    try {
-      const res = await adminApi.getMaterialSuppliers(materialId, adminId);
-      setMaterialSuppliers(res.data?.data?.suppliers || []);
-    } catch (_) {
-      setMaterialSuppliers([]);
-    }
-  };
-
-  const loadMaterialsByCategory = async (categoryId, preferredMaterialId = null) => {
-    if (!adminId || !categoryId) {
-      setMaterials([]);
-      setSelectedMaterial(null);
-      return;
-    }
-    setLoadingMaterials(true);
-    setError('');
-    try {
-      const res = await adminApi.getMaterialsByCategory(categoryId, adminId);
-      const nextMaterials = res.data?.data?.materials || [];
-      setMaterials(nextMaterials);
-
-      const selected =
-        nextMaterials.find((m) => m.id === preferredMaterialId) ||
-        nextMaterials.find((m) => m.id === selectedMaterial?.id) ||
-        null;
-      setSelectedMaterial(selected);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load materials');
-      setMaterials([]);
-      setSelectedMaterial(null);
-    } finally {
-      setLoadingMaterials(false);
-    }
-  };
+  const [selectedCategoryName, setSelectedCategoryName] = useState('');
+  const [selectedBrandName, setSelectedBrandName] = useState('');
+  const [materialModal, setMaterialModal] = useState(null);
+  const [showTempModal, setShowTempModal] = useState(false);
+  const [submittingTemp, setSubmittingTemp] = useState(false);
+  const [units, setUnits] = useState([]);
+  const [tempForm, setTempForm] = useState({
+    category_name: '',
+    brand_name: '',
+    material_name: '',
+    material_code: '',
+    unit_id: '',
+    thicknesses_text: ''
+  });
+  const [tempFiles, setTempFiles] = useState({
+    category: null,
+    brand: null,
+    material: null
+  });
+  const [listRefreshing, setListRefreshing] = useState(false);
+  const materialsFetchSeq = useRef(0);
+  /** After first materials request finishes, use inline refresh instead of full-page spinner. */
+  const materialsInitialFetchDoneRef = useRef(false);
 
   useEffect(() => {
-    loadCategoriesAndUnits();
+    const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  useEffect(() => {
+    materialsInitialFetchDoneRef.current = false;
   }, [adminId]);
 
-  useEffect(() => {
-    loadMaterialsByCategory(selectedCategory?.id);
-  }, [selectedCategory?.id, adminId]);
-
-  useEffect(() => {
-    loadSuppliersByMaterial(selectedMaterial?.id);
-  }, [selectedMaterial?.id, adminId]);
-
-  const openAddCategoryModal = () => {
-    setIsEditingCategory(false);
-    setCategoryForm(blankCategoryForm);
-    setShowCategoryModal(true);
-  };
-
-  const openEditCategoryModal = () => {
-    if (!selectedCategory) return;
-    setIsEditingCategory(true);
-    setCategoryForm({ name: selectedCategory.name || '' });
-    setShowCategoryModal(true);
-  };
-
-  const openAddMaterialModal = () => {
-    if (!selectedCategory) return;
-    setIsEditingMaterial(false);
-    setMaterialForm(blankMaterialForm);
-    setShowMaterialModal(true);
-  };
-
-  const openEditMaterialModal = () => {
-    if (!selectedMaterialDetails) return;
-    setIsEditingMaterial(true);
-    setMaterialForm({
-      ...hydrateMaterialForm(selectedMaterialDetails),
-      vendor_user_ids: materialSuppliers.map((s) => s.supplier_user_id),
-    });
-    setShowMaterialModal(true);
-  };
-
-  const saveCategory = async (e) => {
-    e.preventDefault();
+  const loadMaterials = useCallback(async () => {
     if (!adminId) return;
-    const name = categoryForm.name.trim();
-    if (!name) return;
-
-    setSaving(true);
+    const seq = ++materialsFetchSeq.current;
+    const blockingLoad = !materialsInitialFetchDoneRef.current;
     setError('');
-    try {
-      if (isEditingCategory && selectedCategory) {
-        await adminApi.updateCategory(selectedCategory.id, { admin_id: adminId, name });
-      } else {
-        await adminApi.createCategory({ admin_id: adminId, name });
-      }
-      await loadCategoriesAndUnits();
-      setShowCategoryModal(false);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save category');
-    } finally {
-      setSaving(false);
+    if (blockingLoad) {
+      setLoadingMats(true);
+    } else {
+      setListRefreshing(true);
     }
+    try {
+      const params = debouncedSearch ? { q: debouncedSearch } : {};
+      const res = await adminApi.getMaterials(adminId, params);
+      if (seq !== materialsFetchSeq.current) return;
+      const tree = res.data?.data?.material_tree || [];
+      setMaterialTree(tree);
+      setSelectedCategoryName((prevCat) => {
+        const nextCat =
+          prevCat && tree.some((c) => c.category_name === prevCat) ? prevCat : tree[0]?.category_name || '';
+        setSelectedBrandName((prevBrand) => {
+          if (!nextCat || !prevBrand) return '';
+          const cat = tree.find((c) => c.category_name === nextCat);
+          const brandsInCat = (cat?.brands || []).map((b) => b.brand_name);
+          return brandsInCat.includes(prevBrand) ? prevBrand : '';
+        });
+        return nextCat;
+      });
+    } catch (err) {
+      if (seq !== materialsFetchSeq.current) return;
+      setError(err.response?.data?.message || 'Failed to load materials');
+      setMaterialTree([]);
+      setSelectedCategoryName('');
+      setSelectedBrandName('');
+    } finally {
+      if (seq !== materialsFetchSeq.current) return;
+      materialsInitialFetchDoneRef.current = true;
+      if (blockingLoad) {
+        setLoadingMats(false);
+      } else {
+        setListRefreshing(false);
+      }
+    }
+  }, [adminId, debouncedSearch]);
+
+  useEffect(() => {
+    loadMaterials();
+  }, [loadMaterials]);
+
+  useEffect(() => {
+    if (!adminId) return;
+    adminApi
+      .getUnits(adminId)
+      .then((res) => {
+        const rows = res.data?.data?.units || [];
+        setUnits(rows);
+        if (rows[0]?.id) {
+          setTempForm((f) => ({ ...f, unit_id: String(f.unit_id || rows[0].id) }));
+        }
+      })
+      .catch(() => setUnits([]));
+  }, [adminId]);
+
+  const uploadFile = async (file) => {
+    if (!file) return null;
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await superAdminApi.uploadCatalogAsset(fd);
+    return res.data?.data?.path || null;
   };
 
-  const hasCategorySelected = Boolean(selectedCategory);
-  const hasMaterialSelected = Boolean(selectedMaterialDetails);
-
-  const saveMaterial = async (e) => {
+  const submitTemporaryMaterial = async (e) => {
     e.preventDefault();
-    if (!adminId || !selectedCategory) return;
-
-    const payload = {
-      admin_id: adminId,
-      category_id: selectedCategory.id,
-      material_name: materialForm.material_name.trim(),
-      material_description: materialForm.material_description.trim() || null,
-      unit_id: Number(materialForm.unit_id),
-      brands: parseCommaList(materialForm.brandsText),
-      finishings: parseCommaList(materialForm.finishingsText),
-      thicknesses: parseCommaList(materialForm.thicknessesText),
-    };
-
-    if (!payload.material_name || !payload.unit_id) return;
-
-    setSaving(true);
-    setError('');
-    try {
-      let changedMaterialId = selectedMaterial?.id || null;
-      if (isEditingMaterial && selectedMaterial) {
-        await adminApi.updateMaterial(selectedMaterial.id, payload);
-        changedMaterialId = selectedMaterial.id;
-      } else {
-        const createRes = await adminApi.createMaterial(payload);
-        changedMaterialId = createRes.data?.data?.material?.id || null;
-      }
-
-      const desiredVendorIds = Array.from(new Set((materialForm.vendor_user_ids || []).map((id) => Number(id)).filter(Boolean)));
-      const currentSuppliersRes = await adminApi.getMaterialSuppliers(changedMaterialId, adminId);
-      const currentSuppliers = currentSuppliersRes.data?.data?.suppliers || [];
-      const currentVendorIds = currentSuppliers.map((s) => Number(s.supplier_user_id));
-
-      const toAdd = desiredVendorIds.filter((id) => !currentVendorIds.includes(id));
-      const toRemove = currentSuppliers.filter((s) => !desiredVendorIds.includes(Number(s.supplier_user_id)));
-
-      await Promise.all(
-        toRemove.map((s) => adminApi.deleteMaterialSupplier(s.id, adminId))
-      );
-      await Promise.all(
-        toAdd.map((vendorId) =>
-          adminApi.createMaterialSupplier({
-            admin_id: adminId,
-            material_id: changedMaterialId,
-            supplier_user_id: vendorId,
-          })
-        )
-      );
-
-      await loadMaterialsByCategory(selectedCategory.id, changedMaterialId);
-      await loadSuppliersByMaterial(changedMaterialId);
-      setShowMaterialModal(false);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save material');
-    } finally {
-      setSaving(false);
+    if (!tempForm.category_name.trim() || !tempForm.brand_name.trim() || !tempForm.material_name.trim()) {
+      setError('Category, brand, and material name are required.');
+      return;
     }
-  };
-
-  const appendMaterialMetadata = async (type) => {
-    if (!adminId || !selectedCategory || !selectedMaterialDetails) return;
-
-    const basePayload = {
-      admin_id: adminId,
-      category_id: selectedCategory.id,
-      unit_id: selectedMaterialDetails.unit_id,
-      material_name: selectedMaterialDetails.material_name,
-      material_description: selectedMaterialDetails.material_description || null,
-      brands: (selectedMaterialDetails.brands || []).map((b) => b?.brand?.name).filter(Boolean),
-      finishings: (selectedMaterialDetails.finishings || []).map((f) => f?.finishing?.name).filter(Boolean),
-      thicknesses: (selectedMaterialDetails.thicknesses || []).map((t) => t?.thickness?.label).filter(Boolean),
-    };
-
-    if (type === 'brand') {
-      const value = newBrand.trim();
-      if (!value) return;
-      if (!basePayload.brands.includes(value)) basePayload.brands.push(value);
-    } else if (type === 'finishing') {
-      const value = newFinishing.trim();
-      if (!value) return;
-      if (!basePayload.finishings.includes(value)) basePayload.finishings.push(value);
-    } else if (type === 'thickness') {
-      const value = newThickness.trim();
-      if (!value) return;
-      if (!basePayload.thicknesses.includes(value)) basePayload.thicknesses.push(value);
-    }
-
-    setSaving(true);
-    setError('');
-    try {
-      await adminApi.updateMaterial(selectedMaterialDetails.id, basePayload);
-      await loadMaterialsByCategory(selectedCategory.id, selectedMaterialDetails.id);
-      if (type === 'brand') setNewBrand('');
-      if (type === 'finishing') setNewFinishing('');
-      if (type === 'thickness') setNewThickness('');
-    } catch (err) {
-      setError(err.response?.data?.message || `Failed to add ${type}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const addSupplierToMaterial = async () => {
-    if (!adminId || !selectedMaterialDetails) return;
-    const supplierId = Number(newSupplierId);
-    if (!supplierId) return;
-
-    const exists = materialSuppliers.some((s) => Number(s.supplier_user_id) === supplierId);
-    if (exists) {
-      setError('Supplier already linked to this material');
+    if (!tempForm.unit_id) {
+      setError('Unit is required.');
       return;
     }
 
-    setSaving(true);
+    setSubmittingTemp(true);
     setError('');
     try {
-      await adminApi.createMaterialSupplier({
-        admin_id: adminId,
-        material_id: selectedMaterialDetails.id,
-        supplier_user_id: supplierId,
+      const [categoryImagePath, brandImagePath, materialImagePath] = await Promise.all([
+        uploadFile(tempFiles.category),
+        uploadFile(tempFiles.brand),
+        uploadFile(tempFiles.material)
+      ]);
+      const thicknesses = String(tempForm.thicknesses_text || '')
+        .split('\n')
+        .map((x) => x.trim())
+        .filter(Boolean)
+        .map((label) => ({ label }));
+
+      await adminApi.submitTemporaryMaterial({
+        category_name: tempForm.category_name.trim(),
+        category_image_path: categoryImagePath,
+        brand_name: tempForm.brand_name.trim(),
+        brand_image_path: brandImagePath,
+        material_name: tempForm.material_name.trim(),
+        material_code: tempForm.material_code.trim() || null,
+        unit_id: Number(tempForm.unit_id),
+        image_path: materialImagePath,
+        thicknesses
       });
-      await loadSuppliersByMaterial(selectedMaterialDetails.id);
-      setNewSupplierId('');
+
+      setShowTempModal(false);
+      setTempForm((f) => ({
+        ...f,
+        category_name: '',
+        brand_name: '',
+        material_name: '',
+        material_code: '',
+        thicknesses_text: ''
+      }));
+      setTempFiles({ category: null, brand: null, material: null });
+      setError('');
+      await loadMaterials();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add supplier');
+      setError(err.response?.data?.message || err.message || 'Failed to submit temporary material');
     } finally {
-      setSaving(false);
+      setSubmittingTemp(false);
     }
   };
 
-  return (
-    <div className="admin-materials">
-      <div className="admin-page-header mb-3">
-        <h1 className="admin-page-title mb-1">Materials</h1>
-        <p className="admin-page-subtitle mb-0">Browse categories and manage material catalog</p>
-      </div>
+  const selectedCategory = useMemo(
+    () => materialTree.find((c) => c.category_name === selectedCategoryName) || null,
+    [materialTree, selectedCategoryName]
+  );
+  const brands = selectedCategory?.brands || [];
+  const selectedBrand = useMemo(
+    () => brands.find((b) => b.brand_name === selectedBrandName) || null,
+    [brands, selectedBrandName]
+  );
 
-      <Breadcrumb className="mb-3">
-        <Breadcrumb.Item active>Materials</Breadcrumb.Item>
-        {selectedCategory && <Breadcrumb.Item active>{selectedCategory.name}</Breadcrumb.Item>}
-        {selectedMaterialDetails && <Breadcrumb.Item active>{selectedMaterialDetails.material_name}</Breadcrumb.Item>}
-      </Breadcrumb>
+  return (
+    <div className="admin-materials materials-browser">
+      <div className="admin-page-header mb-3">
+        <div className="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+          <div>
+            <h1 className="admin-page-title mb-1">Materials</h1>
+            <p className="admin-page-subtitle mb-0">
+              Search globally by category, brand, material name, or material code.
+            </p>
+          </div>
+          <Button
+            onClick={() => setShowTempModal(true)}
+            variant="outline-primary"
+            className="flex-shrink-0"
+          >
+            Submit temporary material
+          </Button>
+        </div>
+      </div>
 
       {error && (
         <Alert variant="danger" dismissible onClose={() => setError('')} className="mb-3">
@@ -361,406 +218,315 @@ export default function AdminMaterials() {
         </Alert>
       )}
 
-      {loading ? (
-        <div className="d-flex justify-content-center align-items-center py-5">
+      {loadingMats ? (
+        <div className="d-flex justify-content-center align-items-center py-5 materials-browser-loading">
           <Spinner animation="border" />
         </div>
       ) : (
-        <Row className="g-3">
-          <Col xl={hasMaterialSelected ? 6 : 12} lg={12}>
-            <Card className="border-0 shadow-sm h-100">
-              <Card.Header className="d-flex justify-content-between align-items-center">
-                <strong>Categories & Materials</strong>
-                <div className="d-flex gap-2">
-                  <Button size="sm" variant="outline-primary" onClick={openAddCategoryModal}>
-                    + Category
-                  </Button>
-                  <Button size="sm" variant="primary" disabled={!selectedCategory} onClick={openAddMaterialModal}>
-                    + Material
-                  </Button>
-                </div>
-              </Card.Header>
-              <Card.Body>
-                {!hasCategorySelected ? (
-                  <div>
-                    <div className="materials-column-title">Categories</div>
-                    <ListGroup className="materials-list">
-                      {categories.length === 0 ? (
-                        <ListGroup.Item className="text-muted">No categories found</ListGroup.Item>
-                      ) : (
-                        categories.map((category) => (
-                          <ListGroup.Item
-                            key={category.id}
-                            action
-                            active={selectedCategory?.id === category.id}
+        <Row className="g-0 materials-browser-row">
+          <Col xs={12} className="materials-browser-main-col p-0">
+            <Row className="g-0 materials-browser-drill-row">
+              <Col xs={12} md={4} lg={3} xl={3} className="materials-browser-sidebar-col">
+                <aside className="materials-browser-sidebar">
+                  <div className="materials-browser-sidebar-title">Categories</div>
+                  <div className="materials-browser-sidebar-search">
+                    <Form.Control
+                      size="sm"
+                      type="search"
+                      placeholder="Search category, brand, material, code…"
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') e.preventDefault();
+                      }}
+                      aria-label="Search materials globally"
+                      autoComplete="off"
+                    />
+                    {listRefreshing ? (
+                      <div className="materials-browser-sidebar-search-hint text-muted small mt-1">Updating…</div>
+                    ) : null}
+                  </div>
+                  <div className="materials-browser-sidebar-list">
+                    {materialTree.length === 0 ? (
+                      <div className="materials-browser-empty text-muted small p-3">No materials in the catalog.</div>
+                    ) : (
+                      materialTree.map((category) => {
+                        const active = selectedCategoryName === category.category_name;
+                        return (
+                          <button
+                            key={category.category_name}
+                            type="button"
+                            className={`materials-browser-sidebar-item${active ? ' materials-browser-sidebar-item--active' : ''}`}
                             onClick={() => {
-                              setSelectedCategory(category);
-                              setSelectedMaterial(null);
+                              setSelectedCategoryName(category.category_name);
+                              setSelectedBrandName('');
+                              setMaterialModal(null);
                             }}
-                            className="d-flex justify-content-between align-items-center"
                           >
-                            <span>{category.name}</span>
-                          </ListGroup.Item>
-                        ))
-                      )}
-                    </ListGroup>
+                            <div className="materials-browser-sidebar-text">
+                              <span className="materials-browser-sidebar-name">{category.category_name}</span>
+                              <span className="materials-browser-sidebar-meta">
+                                {(category.brands || []).length} brand(s)
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
                   </div>
-                ) : (
-                  <Row className="g-3">
-                    <Col md={6}>
-                      <div className="materials-column-title">Categories</div>
-                      <ListGroup className="materials-list">
-                        {categories.length === 0 ? (
-                          <ListGroup.Item className="text-muted">No categories found</ListGroup.Item>
-                        ) : (
-                          categories.map((category) => (
-                            <ListGroup.Item
-                              key={category.id}
-                              action
-                              active={selectedCategory?.id === category.id}
-                              onClick={() => {
-                                setSelectedCategory(category);
-                                setSelectedMaterial(null);
-                              }}
-                            className="d-flex justify-content-between align-items-center"
-                            >
-                              <span>{category.name}</span>
-                            {selectedCategory?.id === category.id && (
-                              <Button
-                                size="sm"
-                                variant="link"
-                                className="materials-icon-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openEditCategoryModal();
-                                }}
-                                title="Edit category"
-                              >
-                                ✎
-                              </Button>
-                            )}
-                            </ListGroup.Item>
-                          ))
-                        )}
-                      </ListGroup>
-                    </Col>
+                </aside>
+              </Col>
 
-                    <Col md={6}>
-                      <div className="materials-column-title">Materials</div>
-                      {loadingMaterials ? (
-                        <div className="py-4 text-center">
-                          <Spinner animation="border" size="sm" />
+              <Col xs={12} md={4} lg={3} xl={3} className="materials-browser-sidebar-col materials-browser-brands-col">
+                <aside className="materials-browser-sidebar">
+                  <div className="materials-browser-sidebar-title">Brands</div>
+                  <div className="materials-browser-sidebar-list">
+                    {!selectedCategory ? (
+                      <div className="materials-browser-empty text-muted small p-3">Select a category.</div>
+                    ) : brands.length === 0 ? (
+                      <div className="materials-browser-empty text-muted small p-3">No brands in this category.</div>
+                    ) : (
+                      brands.map((b) => {
+                        const active = selectedBrandName === b.brand_name;
+                        return (
+                          <button
+                            key={b.brand_name}
+                            type="button"
+                            className={`materials-browser-sidebar-item${active ? ' materials-browser-sidebar-item--active' : ''}`}
+                            onClick={() => {
+                              setSelectedBrandName(b.brand_name);
+                              setMaterialModal(null);
+                            }}
+                          >
+                            <div className="materials-browser-sidebar-thumb">
+                              {b.brand_image_url ? (
+                                <img src={b.brand_image_url} alt="" />
+                              ) : (
+                                <span className="text-muted">—</span>
+                              )}
+                            </div>
+                            <div className="materials-browser-sidebar-text">
+                              <span className="materials-browser-sidebar-name">{b.brand_name}</span>
+                              <span className="materials-browser-sidebar-meta">{(b.materials || []).length} material(s)</span>
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </aside>
+              </Col>
+
+              <Col xs={12} md={4} lg={6} xl={6} className="materials-browser-main-col">
+                <main className="materials-browser-main">
+                  {!selectedCategory ? (
+                    <div className="materials-browser-placeholder text-muted">Select a category from the left.</div>
+                  ) : !selectedBrand ? (
+                    <div className="materials-browser-placeholder text-muted">Select a brand to view materials.</div>
+                  ) : (
+                    <>
+                      <div className="materials-browser-hero">
+                        <div className="materials-browser-hero-text">
+                          <h2 className="materials-browser-hero-title">{selectedBrand.brand_name}</h2>
+                          <p className="materials-browser-hero-sub mb-0">
+                            Category: <strong>{selectedCategory.category_name}</strong>
+                          </p>
                         </div>
-                      ) : (
-                        <ListGroup className="materials-list">
-                          {materials.length === 0 ? (
-                            <ListGroup.Item className="text-muted">
-                              No materials in this category
-                            </ListGroup.Item>
+                        <div className="materials-browser-hero-visual">
+                          {selectedBrand.brand_image_url ? (
+                            <img src={selectedBrand.brand_image_url} alt="" />
                           ) : (
-                            materials.map((material) => (
-                              <ListGroup.Item
-                                key={material.id}
-                                action
-                                active={selectedMaterial?.id === material.id}
-                                onClick={() => setSelectedMaterial(material)}
-                                className="d-flex justify-content-between align-items-center"
-                              >
-                                <span>{material.material_name}</span>
-                                {selectedMaterial?.id === material.id && (
-                                  <Button
-                                    size="sm"
-                                    variant="link"
-                                    className="materials-icon-btn"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openEditMaterialModal();
-                                    }}
-                                    title="Edit material"
-                                  >
-                                    ✎
-                                  </Button>
-                                )}
-                              </ListGroup.Item>
-                            ))
+                            <span className="text-white-50 small">No image</span>
                           )}
-                        </ListGroup>
+                        </div>
+                      </div>
+
+                      <div className="materials-browser-section-label">Materials</div>
+                      {(selectedBrand.materials || []).length === 0 ? (
+                        <div className="text-muted py-4">No materials for this brand.</div>
+                      ) : (
+                        <div className="materials-brand-grid">
+                          {(selectedBrand.materials || []).map((m) => (
+                            <button
+                              key={`${selectedBrand.brand_name}-${m.id}`}
+                              type="button"
+                              className="materials-brand-card"
+                              onClick={() => setMaterialModal({ ...m, brand_name: selectedBrand.brand_name })}
+                            >
+                              <div
+                                className="materials-brand-card-header"
+                                style={{ background: brandAccentColor(selectedBrand.brand_name) }}
+                              >
+                                {m.material_name}
+                              </div>
+                              <div className="materials-brand-card-body">
+                                {m.image_url ? (
+                                  <img src={m.image_url} alt="" />
+                                ) : (
+                                  <div className="materials-brand-card-placeholder text-muted small">No image</div>
+                                )}
+                              </div>
+                              <div className="materials-brand-card-footer">
+                                <span className="materials-brand-card-footer-name">{m.material_name}</span>
+                                <span className="materials-brand-card-footer-hint font-monospace">
+                                  {m.material_code || '—'}
+                                </span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
                       )}
-                    </Col>
-                  </Row>
-                )}
-              </Card.Body>
-            </Card>
+                    </>
+                  )}
+                </main>
+              </Col>
+            </Row>
           </Col>
-
-          {hasMaterialSelected && (
-            <Col xl={6} lg={12}>
-            <Card className="border-0 shadow-sm h-100">
-              <Card.Header>
-                <strong>{selectedMaterialDetails?.material_name || 'Material Details'}</strong>
-              </Card.Header>
-              <Card.Body>
-                  <div className="pt-2 mb-3 border-bottom pb-2">
-                    <p className="mb-1"><strong>Category:</strong> {selectedMaterialDetails.category?.name || '—'}</p>
-                    <p className="mb-1"><strong>Unit:</strong> {selectedMaterialDetails.unit?.measuring_unit || '—'}</p>
-                    <p className="mb-1"><strong>Status:</strong> {selectedMaterialDetails.record_status || '—'}</p>
-                    <p className="mb-0">
-                      <strong>Description:</strong> {selectedMaterialDetails.material_description || '—'}
-                    </p>
-                  </div>
-                  <Tabs defaultValue="brands" id="material-details-tabs" className="mb-3">
-                    <TabsList>
-                      <TabsTrigger value="brands">Brands</TabsTrigger>
-                      <TabsTrigger value="finishings">Finishings</TabsTrigger>
-                      <TabsTrigger value="thickness">Thickness</TabsTrigger>
-                      <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="brands">
-                      <div className="d-flex gap-2 pt-2">
-                        <Form.Control
-                          size="sm"
-                          placeholder="Add brand name"
-                          value={newBrand}
-                          onChange={(e) => setNewBrand(e.target.value)}
-                        />
-                        <Button size="sm" onClick={() => appendMaterialMetadata('brand')} disabled={saving}>
-                          + Add
-                        </Button>
-                      </div>
-                      <ListGroup variant="flush" className="pt-2">
-                        {(selectedMaterialDetails.brands || []).length === 0 ? (
-                          <ListGroup.Item className="text-muted px-0">No brands added</ListGroup.Item>
-                        ) : (
-                          selectedMaterialDetails.brands.map((item) => (
-                            <ListGroup.Item key={item.id} className="px-0">
-                              {item.brand?.name || '—'}
-                            </ListGroup.Item>
-                          ))
-                        )}
-                      </ListGroup>
-                    </TabsContent>
-
-                    <TabsContent value="finishings">
-                      <div className="d-flex gap-2 pt-2">
-                        <Form.Control
-                          size="sm"
-                          placeholder="Add finishing name"
-                          value={newFinishing}
-                          onChange={(e) => setNewFinishing(e.target.value)}
-                        />
-                        <Button size="sm" onClick={() => appendMaterialMetadata('finishing')} disabled={saving}>
-                          + Add
-                        </Button>
-                      </div>
-                      <ListGroup variant="flush" className="pt-2">
-                        {(selectedMaterialDetails.finishings || []).length === 0 ? (
-                          <ListGroup.Item className="text-muted px-0">No finishings added</ListGroup.Item>
-                        ) : (
-                          selectedMaterialDetails.finishings.map((item) => (
-                            <ListGroup.Item key={item.id} className="px-0">
-                              {item.finishing?.name || '—'}
-                            </ListGroup.Item>
-                          ))
-                        )}
-                      </ListGroup>
-                    </TabsContent>
-
-                    <TabsContent value="thickness">
-                      <div className="d-flex gap-2 pt-2">
-                        <Form.Control
-                          size="sm"
-                          placeholder="Add thickness label (e.g. 18mm)"
-                          value={newThickness}
-                          onChange={(e) => setNewThickness(e.target.value)}
-                        />
-                        <Button size="sm" onClick={() => appendMaterialMetadata('thickness')} disabled={saving}>
-                          + Add
-                        </Button>
-                      </div>
-                      <ListGroup variant="flush" className="pt-2">
-                        {(selectedMaterialDetails.thicknesses || []).length === 0 ? (
-                          <ListGroup.Item className="text-muted px-0">No thickness values added</ListGroup.Item>
-                        ) : (
-                          selectedMaterialDetails.thicknesses.map((item) => (
-                            <ListGroup.Item key={item.id} className="px-0">
-                              {item.thickness?.label || '—'}
-                              {item.thickness?.value_mm != null ? ` (${item.thickness.value_mm} mm)` : ''}
-                            </ListGroup.Item>
-                          ))
-                        )}
-                      </ListGroup>
-                    </TabsContent>
-
-                    <TabsContent value="suppliers">
-                      <div className="d-flex gap-2 pt-2">
-                        <Form.Select
-                          size="sm"
-                          value={newSupplierId}
-                          onChange={(e) => setNewSupplierId(e.target.value)}
-                        >
-                          <option value="">Select vendor</option>
-                          {vendors.map((vendor) => {
-                            const vendorId = Number(vendor.adminId ?? vendor.id);
-                            return (
-                              <option key={vendorId} value={vendorId}>
-                                {vendor.username} {vendor.mobile ? `(${vendor.mobile})` : ''}
-                              </option>
-                            );
-                          })}
-                        </Form.Select>
-                        <Button size="sm" onClick={addSupplierToMaterial} disabled={saving || !newSupplierId}>
-                          + Add
-                        </Button>
-                      </div>
-                      <ListGroup variant="flush" className="pt-2">
-                        {materialSuppliers.length === 0 ? (
-                          <ListGroup.Item className="text-muted px-0">No suppliers linked</ListGroup.Item>
-                        ) : (
-                          materialSuppliers.map((supplier) => {
-                            const matchedVendor = vendors.find(
-                              (v) => Number(v.adminId ?? v.id) === Number(supplier.supplier_user_id)
-                            );
-                            return (
-                              <ListGroup.Item key={supplier.id} className="px-0">
-                                {matchedVendor?.username || `Vendor #${supplier.supplier_user_id}`}
-                                {matchedVendor?.mobile ? ` (${matchedVendor.mobile})` : ''}
-                              </ListGroup.Item>
-                            );
-                          })
-                        )}
-                      </ListGroup>
-                    </TabsContent>
-                  </Tabs>
-              </Card.Body>
-            </Card>
-          </Col>
-          )}
         </Row>
       )}
 
-      <Modal show={showCategoryModal} onHide={() => !saving && setShowCategoryModal(false)}>
-        <Form onSubmit={saveCategory}>
-          <Modal.Header closeButton>
-            <Modal.Title>{isEditingCategory ? 'Update category' : 'Add category'}</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form.Group>
-              <Form.Label>Name</Form.Label>
-              <Form.Control
-                value={categoryForm.name}
-                onChange={(e) => setCategoryForm({ name: e.target.value })}
-                placeholder="Category name"
-                required
-              />
-            </Form.Group>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowCategoryModal(false)} disabled={saving}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" disabled={saving}>
-              {saving ? 'Saving...' : isEditingCategory ? 'Update' : 'Add'}
-            </Button>
-          </Modal.Footer>
-        </Form>
+      <Modal show={!!materialModal} onHide={() => setMaterialModal(null)} centered size="md" className="materials-brand-modal">
+        <Modal.Header closeButton className="border-0 pb-0">
+          <div className="d-flex align-items-center gap-3 w-100">
+            <div className="materials-brand-modal-thumb flex-shrink-0">
+              {materialModal?.image_url ? (
+                <img src={materialModal.image_url} alt="" />
+              ) : (
+                <span className="text-muted small">—</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <Modal.Title as="h5" className="mb-0 text-truncate">
+                {materialModal?.material_name}
+              </Modal.Title>
+              <div className="small text-muted text-truncate">
+                {materialModal?.brand_name}
+                {materialModal?.material_code ? ` · ${materialModal.material_code}` : ''}
+              </div>
+            </div>
+          </div>
+        </Modal.Header>
+        <Modal.Body className="pt-3">
+          <div className="materials-brand-modal-section">Available thicknesses</div>
+          {(materialModal?.thicknesses || []).length === 0 ? (
+            <p className="text-muted small mb-0">No thickness options for this brand.</p>
+          ) : (
+            <ul className="materials-thickness-list list-unstyled mb-0">
+              {materialModal.thicknesses.map((th) => (
+                <li key={th.id} className="materials-thickness-list-item">
+                  <span className="materials-thickness-label">{th.label || '—'}</span>
+                  <div className="materials-thickness-meta">
+                    {th.value_mm != null ? (
+                      <span className="materials-thickness-mm text-muted">
+                        {String(th.value_mm)} mm
+                      </span>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Modal.Body>
       </Modal>
 
-      <Modal show={showMaterialModal} onHide={() => !saving && setShowMaterialModal(false)}>
-        <Form onSubmit={saveMaterial}>
-          <Modal.Header closeButton>
-            <Modal.Title>{isEditingMaterial ? 'Update material' : 'Add material'}</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form.Group className="mb-2">
-              <Form.Label>Material name</Form.Label>
-              <Form.Control
-                value={materialForm.material_name}
-                onChange={(e) => setMaterialForm((f) => ({ ...f, material_name: e.target.value }))}
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label>Unit</Form.Label>
-              <Form.Select
-                value={materialForm.unit_id}
-                onChange={(e) => setMaterialForm((f) => ({ ...f, unit_id: e.target.value }))}
-                required
-              >
-                <option value="">Select unit</option>
-                {units.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.measuring_unit}
-                  </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label>Vendors (optional)</Form.Label>
-              <Form.Select
-                multiple
-                value={(materialForm.vendor_user_ids || []).map(String)}
-                onChange={(e) => {
-                  const values = Array.from(e.target.selectedOptions).map((opt) => Number(opt.value));
-                  setMaterialForm((f) => ({ ...f, vendor_user_ids: values }));
-                }}
-              >
-                {vendors.map((vendor) => {
-                  const vendorId = Number(vendor.adminId ?? vendor.id);
-                  return (
-                    <option key={vendorId} value={vendorId}>
-                      {vendor.username} {vendor.mobile ? `(${vendor.mobile})` : ''}
+      <Modal show={showTempModal} onHide={() => !submittingTemp && setShowTempModal(false)} centered size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Submit Temporary Material</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={submitTemporaryMaterial}>
+            <Row className="g-2">
+              <Col md={6}>
+                <Form.Label>Category name</Form.Label>
+                <Form.Control
+                  value={tempForm.category_name}
+                  onChange={(e) => setTempForm((f) => ({ ...f, category_name: e.target.value }))}
+                  required
+                />
+              </Col>
+              <Col md={6}>
+                <Form.Label>Brand name</Form.Label>
+                <Form.Control
+                  value={tempForm.brand_name}
+                  onChange={(e) => setTempForm((f) => ({ ...f, brand_name: e.target.value }))}
+                  required
+                />
+              </Col>
+              <Col md={6}>
+                <Form.Label>Material name</Form.Label>
+                <Form.Control
+                  value={tempForm.material_name}
+                  onChange={(e) => setTempForm((f) => ({ ...f, material_name: e.target.value }))}
+                  required
+                />
+              </Col>
+              <Col md={6}>
+                <Form.Label>Material code</Form.Label>
+                <Form.Control
+                  value={tempForm.material_code}
+                  onChange={(e) => setTempForm((f) => ({ ...f, material_code: e.target.value }))}
+                />
+              </Col>
+              <Col md={6}>
+                <Form.Label>Unit</Form.Label>
+                <Form.Select
+                  value={tempForm.unit_id}
+                  onChange={(e) => setTempForm((f) => ({ ...f, unit_id: e.target.value }))}
+                  required
+                >
+                  <option value="">Select unit...</option>
+                  {units.map((u) => (
+                    <option key={u.id} value={String(u.id)}>
+                      {u.measuring_unit || u.unit_name}
                     </option>
-                  );
-                })}
-              </Form.Select>
-              <Form.Text className="text-muted">
-                Hold Ctrl/Cmd to select multiple vendors.
-              </Form.Text>
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label>Description</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={2}
-                value={materialForm.material_description}
-                onChange={(e) => setMaterialForm((f) => ({ ...f, material_description: e.target.value }))}
-              />
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label>Brands (comma separated)</Form.Label>
-              <Form.Control
-                value={materialForm.brandsText}
-                onChange={(e) => setMaterialForm((f) => ({ ...f, brandsText: e.target.value }))}
-                placeholder="Brand A, Brand B"
-              />
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label>Finishings (comma separated)</Form.Label>
-              <Form.Control
-                value={materialForm.finishingsText}
-                onChange={(e) => setMaterialForm((f) => ({ ...f, finishingsText: e.target.value }))}
-                placeholder="Matte, Glossy"
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label>Thickness (comma separated labels)</Form.Label>
-              <Form.Control
-                value={materialForm.thicknessesText}
-                onChange={(e) => setMaterialForm((f) => ({ ...f, thicknessesText: e.target.value }))}
-                placeholder="6mm, 12mm, 18mm"
-              />
-            </Form.Group>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowMaterialModal(false)} disabled={saving}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" disabled={saving}>
-              {saving ? 'Saving...' : isEditingMaterial ? 'Update' : 'Add'}
-            </Button>
-          </Modal.Footer>
-        </Form>
+                  ))}
+                </Form.Select>
+              </Col>
+              <Col md={6}>
+                <Form.Label>Thicknesses (one per line)</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  value={tempForm.thicknesses_text}
+                  onChange={(e) => setTempForm((f) => ({ ...f, thicknesses_text: e.target.value }))}
+                  placeholder={'18mm\n12mm'}
+                />
+              </Col>
+              <Col md={4}>
+                <Form.Label>Category image (optional)</Form.Label>
+                <Form.Control
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setTempFiles((f) => ({ ...f, category: e.target.files?.[0] || null }))}
+                />
+              </Col>
+              <Col md={4}>
+                <Form.Label>Brand image (optional)</Form.Label>
+                <Form.Control
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setTempFiles((f) => ({ ...f, brand: e.target.files?.[0] || null }))}
+                />
+              </Col>
+              <Col md={4}>
+                <Form.Label>Material image (optional)</Form.Label>
+                <Form.Control
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setTempFiles((f) => ({ ...f, material: e.target.files?.[0] || null }))}
+                />
+              </Col>
+            </Row>
+            <div className="d-flex justify-content-end gap-2 mt-3">
+              <Button variant="secondary" onClick={() => setShowTempModal(false)} disabled={submittingTemp}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submittingTemp}>
+                {submittingTemp ? 'Submitting...' : 'Submit'}
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
       </Modal>
     </div>
   );

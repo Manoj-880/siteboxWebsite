@@ -1,7 +1,33 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Alert, Button, Card, Col, Row, Spinner, Table } from 'react-bootstrap';
+import { Alert, Badge, Button, Card, Col, Row, Spinner, Table } from 'react-bootstrap';
 import { adminApi } from '../../api/axiosConfig';
+
+function prettyDateTime(value) {
+  if (!value) return '—';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+}
+
+function formatStatus(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (!normalized) return '—';
+  return normalized
+    .replaceAll('_', ' ')
+    .split(' ')
+    .map((part) => (part ? part[0].toUpperCase() + part.slice(1) : ''))
+    .join(' ');
+}
+
+function statusVariant(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (normalized === 'delivered') return 'success';
+  if (normalized === 'delayed') return 'danger';
+  if (normalized === 'dispatched') return 'info';
+  if (normalized === 'taken') return 'primary';
+  if (normalized === 'created') return 'warning';
+  return 'secondary';
+}
 
 export default function AdminOrderDetails() {
   const { orderId } = useParams();
@@ -11,13 +37,25 @@ export default function AdminOrderDetails() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    setLoading(true);
-    setError('');
-    adminApi
-      .getMaterialRequestOrders()
-      .then((res) => setOrders(res.data?.data?.orders || []))
-      .catch((err) => setError(err.response?.data?.message || 'Failed to load order details'))
-      .finally(() => setLoading(false));
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await adminApi.getMaterialRequestOrders();
+        if (!mounted) return;
+        setOrders(res?.data?.data?.orders ?? []);
+      } catch (err) {
+        if (!mounted) return;
+        setOrders([]);
+        setError(err?.response?.data?.message || err?.message || 'Failed to load order');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const order = useMemo(
@@ -25,16 +63,10 @@ export default function AdminOrderDetails() {
     [orders, orderId]
   );
 
-  const prettyDateTime = (value) => {
-    if (!value) return '—';
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
-  };
-
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center py-5">
-        <Spinner animation="border" />
+        <Spinner animation="border" style={{ color: 'var(--sitex-primary-alt)' }} />
       </div>
     );
   }
@@ -46,7 +78,7 @@ export default function AdminOrderDetails() {
           <h1 className="admin-page-title mb-1">Order Details</h1>
           <p className="admin-page-subtitle mb-0">Complete information for this order</p>
         </div>
-        <Button variant="outline-secondary" size="sm" onClick={() => navigate('/admin/orders')}>
+        <Button variant="outline-secondary" size="sm" onClick={() => navigate('/admin/orders?tab=orders')}>
           Back
         </Button>
       </div>
@@ -67,11 +99,16 @@ export default function AdminOrderDetails() {
             <Col md={6}>
               <Card className="border-0 shadow-sm h-100">
                 <Card.Body>
-                  <div className="fw-semibold mb-2">Order #{order.id}</div>
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <div className="fw-semibold">Order #{order.id}</div>
+                    <Badge bg={statusVariant(order.order_status || order.raw_order_status)}>
+                      {formatStatus(order.order_status || order.raw_order_status)}
+                    </Badge>
+                  </div>
+                  <div className="small text-muted">Request ID: {order.material_request_id || '—'}</div>
                   <div className="small text-muted">Site: {order.site_name || '—'}</div>
                   <div className="small text-muted">Supervisor: {order.supervisor_name || '—'}</div>
                   <div className="small text-muted">Vendor: {order.vendor_name || '—'}</div>
-                  <div className="small text-muted">Status: {order.order_status || 'ordered'}</div>
                 </Card.Body>
               </Card>
             </Col>
@@ -79,9 +116,9 @@ export default function AdminOrderDetails() {
               <Card className="border-0 shadow-sm h-100">
                 <Card.Body>
                   <div className="fw-semibold mb-2">Timeline</div>
-                  <div className="small text-muted">Ordered at: {prettyDateTime(order.created_at)}</div>
+                  <div className="small text-muted">Created at: {prettyDateTime(order.created_at)}</div>
                   <div className="small text-muted">ETA: {prettyDateTime(order.estimated_delivery_date)}</div>
-                  <div className="small text-muted">Accepted at: {prettyDateTime(order.accepted_at)}</div>
+                  <div className="small text-muted">Taken at: {prettyDateTime(order.accepted_at)}</div>
                   <div className="small text-muted">Delivered at: {prettyDateTime(order.delivered_at)}</div>
                 </Card.Body>
               </Card>
@@ -103,7 +140,9 @@ export default function AdminOrderDetails() {
                 <tbody>
                   {(order.items || []).length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="text-muted text-center py-3">No items found.</td>
+                      <td colSpan={4} className="text-muted text-center py-3">
+                        No items found.
+                      </td>
                     </tr>
                   ) : (
                     order.items.map((item) => {

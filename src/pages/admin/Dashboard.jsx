@@ -34,8 +34,8 @@ export default function AdminDashboard() {
 
   const statCards = [
     { key: 'sites', label: 'Sites', value: stats.sites ?? 0, class: 'stat-card-sites', path: '/admin/sites' },
-    { key: 'material_requests', label: 'Material requests', value: stats.material_requests ?? 0, class: 'stat-card-requests', path: '/admin/material-requests' },
-    { key: 'orders', label: 'Orders', value: stats.orders ?? 0, class: 'stat-card-orders', path: '/admin/orders' },
+    { key: 'material_requests', label: 'Material requests', value: stats.material_requests ?? 0, class: 'stat-card-requests', path: '/admin/orders?tab=requests' },
+    { key: 'orders', label: 'Orders', value: stats.orders ?? 0, class: 'stat-card-orders', path: '/admin/orders?tab=orders' },
     { key: 'staff', label: 'Staff', value: stats.staff ?? 0, class: 'stat-card-staff', path: '/admin/staff' },
   ];
 

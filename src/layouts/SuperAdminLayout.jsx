@@ -4,6 +4,7 @@ export default function SuperAdminLayout() {
   const navLinks = [
     { to: '/super-admin', end: true, label: 'Dashboard' },
     { to: '/super-admin/companies', end: false, label: 'Companies' },
+    { to: '/super-admin/materials', end: true, label: 'Materials' },
     { to: '/super-admin/units', end: false, label: 'Units' },
     { to: '/super-admin/profile', end: true, label: 'Profile' },
   ];

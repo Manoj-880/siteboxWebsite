@@ -23,10 +23,11 @@ import AdminOrders from './pages/admin/Orders';
 import AdminTasks from './pages/admin/Tasks';
 import AdminOrderDetails from './pages/admin/OrderDetails';
 import AdminMaterials from './pages/admin/Materials';
-import AdminMaterialRequests from './pages/admin/MaterialRequests';
-import AdminMaterialRequestDetails from './pages/admin/MaterialRequestDetails';
+import SuperAdminMaterials from './pages/superadmin/Materials';
 import AdminTransactions from './pages/admin/Transactions';
+import AdminAttendance from './pages/admin/Attendance';
 import SupervisorDashboard from './pages/supervisor/Dashboard';
+import SupervisorTasks from './pages/supervisor/Tasks';
 import DesignerDashboard from './pages/designer/Dashboard';
 import ContractorDashboard from './pages/contractor/Dashboard';
 import VendorDashboard from './pages/vendor/Dashboard';
@@ -82,6 +83,7 @@ function AppRoutes() {
         <Route path="companies/:id" element={<CompanyDetails />} />
         <Route path="admins" element={<Admins />} />
         <Route path="units" element={<Units />} />
+        <Route path="materials" element={<SuperAdminMaterials />} />
         <Route path="profile" element={<Profile />} />
       </Route>
 
@@ -103,12 +105,12 @@ function AppRoutes() {
         <Route path="payments" element={<AdminPayments />} />
         <Route path="transactions" element={<AdminTransactions />} />
         <Route path="staff" element={<AdminStaff />} />
+        <Route path="attendance" element={<AdminAttendance />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="material-requests" element={<AdminOrders />} />
         <Route path="tasks" element={<AdminTasks />} />
         <Route path="orders/:orderId" element={<AdminOrderDetails />} />
         <Route path="materials" element={<AdminMaterials />} />
-        <Route path="material-requests" element={<AdminMaterialRequests />} />
-        <Route path="material-request/:hashedId" element={<AdminMaterialRequestDetails />} />
       </Route>
 
       {/* Supervisor: user_role_id = 3 */}
@@ -125,6 +127,7 @@ function AppRoutes() {
         <Route index element={<SupervisorDashboard />} />
         <Route path="sites" element={<AdminSites />} />
         <Route path="sites/:siteId" element={<AdminSiteDetails />} />
+        <Route path="tasks" element={<SupervisorTasks />} />
       </Route>
 
       {/* Designer: user_role_id = 4 */}
@@ -133,12 +136,17 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <RoleRoute roleId={ROLE_IDS.DESIGNER}>
-              <RoleLayout basePath="/designer" roleLabel="Designer" />
+              <RoleLayout
+                basePath="/designer"
+                roleLabel="Designer"
+                extraNavLinks={[{ to: '/designer/tasks', end: true, label: 'My tasks' }]}
+              />
             </RoleRoute>
           </PrivateRoute>
         }
       >
         <Route index element={<DesignerDashboard />} />
+        <Route path="tasks" element={<SupervisorTasks />} />
       </Route>
 
       {/* Contractor: user_role_id = 5 */}
@@ -161,12 +169,17 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <RoleRoute roleId={ROLE_IDS.VENDOR}>
-              <RoleLayout basePath="/vendor" roleLabel="Vendor" />
+              <RoleLayout
+                basePath="/vendor"
+                roleLabel="Vendor"
+                extraNavLinks={[{ to: '/vendor/tasks', end: true, label: 'My tasks' }]}
+              />
             </RoleRoute>
           </PrivateRoute>
         }
       >
         <Route index element={<VendorDashboard />} />
+        <Route path="tasks" element={<SupervisorTasks />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

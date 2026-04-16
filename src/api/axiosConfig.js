@@ -42,6 +42,7 @@ import {
   dashboardApi as mockDashboardApi,
   rolesApi as mockRolesApi,
   adminApi as mockAdminApi,
+  myTasksApi as mockMyTasksApi,
 } from './mockApi';
 
 // Real API handlers
@@ -66,6 +67,22 @@ const realSuperAdminApi = {
   createAdmin: (data) => api.post('/admin/create', data),
   getUnits: () => api.get('/web/super-admin/get-units'),
   createUnit: (data) => api.post('/web/super-admin/add-units', data),
+  uploadCatalogAsset: (formData) =>
+    api.post('/web/super-admin/upload-catalog-asset', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  getMaterialsCatalog: (adminId, params = {}) =>
+    api.get('/admin/materials', {
+      params: { admin_id: adminId, ...params },
+    }),
+  createMaterialCatalog: (body) => api.post('/admin/materials', body),
+  updateMaterialCatalog: (materialId, body) => api.put(`/admin/materials/${materialId}`, body),
+  deleteMaterialCatalog: (materialId, adminId) =>
+    api.delete(`/admin/materials/${materialId}`, { params: { admin_id: adminId } }),
+  getTemporaryMaterials: (adminId, params = {}) =>
+    api.get('/admin/materials/temporary', { params: { admin_id: adminId, ...params } }),
+  approveTemporaryMaterial: (submissionId, adminId, body) =>
+    api.put(`/admin/materials/temporary/${submissionId}/approve`, { admin_id: adminId, ...body }),
 };
 
 const realDashboardApi = {
@@ -83,13 +100,13 @@ const realAdminApi = {
   getSites: () => api.get('/admin/sites/web'),
   getSiteDetails: (siteId) => api.get(`/admin/sites/web/${siteId}`),
   getUnits: (adminId) => api.get('/admin/units', { params: { admin_id: adminId } }),
-  getCategories: (adminId) => api.get('/admin/categories', { params: { admin_id: adminId } }),
-  createCategory: (body) => api.post('/admin/categories', body),
-  updateCategory: (categoryId, body) => api.put(`/admin/categories/${categoryId}`, body),
-  getMaterialsByCategory: (categoryId, adminId) =>
-    api.get(`/admin/categories/${categoryId}/materials`, { params: { admin_id: adminId } }),
-  createMaterial: (body) => api.post('/admin/materials', body),
-  updateMaterial: (materialId, body) => api.put(`/admin/materials/${materialId}`, body),
+  getMaterials: (adminId, params = {}) =>
+    api.get('/admin/materials', { params: { admin_id: adminId, ...params } }),
+  getMaterialRequests: () => api.get('/admin/material-requests'),
+  getMaterialRequestOrders: () => api.get('/admin/material-request-orders'),
+  createMaterialRequestOrder: (requestId, body) => api.post(`/admin/material-requests/${requestId}/orders`, body),
+  getTemporaryMaterials: (params = {}) => api.get('/admin/materials/temporary', { params }),
+  submitTemporaryMaterial: (body) => api.post('/admin/materials/temporary', body),
   getMaterialSuppliers: (materialId, adminId) =>
     api.get('/admin/materials-suppliers', {
       params: {
@@ -124,9 +141,6 @@ const realAdminApi = {
   addClientTransaction: (siteId, amount) => api.post(`/admin/payments/clients/${siteId}/transactions`, { amount }),
   getTransactions: (params) => api.get('/admin/transactions', { params }),
   getUpdates: () => api.get('/admin/updates'),
-  getMaterialRequests: () => api.get('/admin/material-requests'),
-  createMaterialRequestOrder: (requestId, body) => api.post(`/admin/material-requests/${requestId}/orders`, body),
-  getMaterialRequestOrders: () => api.get('/admin/material-request-orders'),
   getTasksWeb: () => api.get('/admin/tasks/web'),
   createTaskWeb: (body) => api.post('/admin/tasks/web', body),
   getVendorOrders: () => api.get('/vendor/orders'),
@@ -135,6 +149,13 @@ const realAdminApi = {
   getEmployeesWeb: (roleId) =>
     api.get('/admin/employees/web', { params: roleId != null ? { role_id: roleId } : {} }),
   addEmployeeWeb: (body) => api.post('/admin/employees/web', body),
+  getAttendanceWeb: (params) => api.get('/admin/attendance/web', { params }),
+};
+
+/** Supervisor / Designer / Vendor / Factory — assigned tasks & completion (multipart). */
+const realMyTasksApi = {
+  getMyTasks: (params) => api.get('/my-tasks', { params }),
+  completeTask: (taskId, formData) => api.post(`/my-tasks/${taskId}/complete`, formData),
 };
 
 // Export mock or real based on env
@@ -147,3 +168,4 @@ export const superAdminApi = USE_MOCK ? mockSuperAdminApi : realSuperAdminApi;
 export const dashboardApi = USE_MOCK ? mockDashboardApi : realDashboardApi;
 export const rolesApi = USE_MOCK ? mockRolesApi : realRolesApi;
 export const adminApi = USE_MOCK ? mockAdminApi : realAdminApi;
+export const myTasksApi = USE_MOCK ? mockMyTasksApi : realMyTasksApi;

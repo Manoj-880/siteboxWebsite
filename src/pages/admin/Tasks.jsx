@@ -12,14 +12,13 @@ const emptyForm = {
 
 const STATUS_COLUMNS = [
   { key: 'pending', label: 'Pending' },
-  { key: 'in_progress', label: 'In Progress' },
   { key: 'completed', label: 'Completed' },
 ];
 
+/** Only pending | completed; legacy values map to pending. */
 const normalizeStatus = (status) => {
   const s = String(status || '').trim().toLowerCase();
   if (s === 'completed') return 'completed';
-  if (s === 'in progress' || s === 'in_progress') return 'in_progress';
   return 'pending';
 };
 
@@ -93,7 +92,6 @@ export default function AdminTasks() {
       const payload = {
         task_title: form.task_title.trim(),
         description: form.description?.trim() || null,
-        task_status: 'pending',
         assigned_to_user_id: Number(form.assigned_to_user_id),
         site_id: Number(form.site_id),
         estimated_to_complete: form.estimated_to_complete || null,
@@ -110,7 +108,7 @@ export default function AdminTasks() {
   };
 
   const grouped = useMemo(() => {
-    const map = { pending: [], in_progress: [], completed: [] };
+    const map = { pending: [], completed: [] };
     for (const task of tasks) {
       map[normalizeStatus(task.task_status)].push(task);
     }
@@ -122,7 +120,10 @@ export default function AdminTasks() {
       <div className="admin-page-header mb-4 d-flex justify-content-between align-items-center">
         <div>
           <h1 className="admin-page-title mb-1">Tasks</h1>
-          <p className="admin-page-subtitle mb-0">Create and manage employee tasks</p>
+          <p className="admin-page-subtitle mb-0">
+            New tasks are <strong>Pending</strong>. Employees complete them with a report and/or photos; you can review
+            completion details here.
+          </p>
         </div>
         <Button onClick={openCreate}>Create Task</Button>
       </div>
@@ -137,7 +138,7 @@ export default function AdminTasks() {
       ) : (
         <Row className="g-3">
           {STATUS_COLUMNS.map((col) => (
-            <Col key={col.key} lg={4} md={6} xs={12}>
+            <Col key={col.key} lg={6} md={6} xs={12}>
               <Card className="border-0 shadow-sm h-100">
                 <Card.Header className="bg-white d-flex justify-content-between align-items-center">
                   <strong>{col.label}</strong>
@@ -167,7 +168,10 @@ export default function AdminTasks() {
                             <div>
                               <strong>Assignee:</strong> {task.assigned_to_name || `#${task.assigned_to_user_id}`}
                             </div>
-                            <div><strong>Created:</strong> {task.created_at ? new Date(task.created_at).toLocaleString() : '-'}</div>
+                            <div>
+                              <strong>Created:</strong>{' '}
+                              {task.created_at ? new Date(task.created_at).toLocaleString() : '-'}
+                            </div>
                           </div>
                         </Card.Body>
                       </Card>
@@ -257,20 +261,37 @@ export default function AdminTasks() {
         </Form>
       </Modal>
 
-      <Modal show={!!selectedTask} onHide={closeTaskDetails} centered>
+      <Modal show={!!selectedTask} onHide={closeTaskDetails} centered size="lg">
         <Modal.Header closeButton>
           <Modal.Title>Task Details</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {selectedTask ? (
             <div className="small d-flex flex-column gap-2">
-              <div><strong>Title:</strong> {selectedTask.task_title || '-'}</div>
-              <div><strong>Description:</strong> {selectedTask.description || '-'}</div>
-              <div><strong>Status:</strong> {String(selectedTask.task_status || '-').replace(/_/g, ' ')}</div>
-              <div><strong>Assignee:</strong> {selectedTask.assigned_to_name || `#${selectedTask.assigned_to_user_id}`}</div>
-              <div><strong>Assignee Role:</strong> {selectedTask.assigned_to_role || '-'}</div>
-              <div><strong>Assigned By:</strong> {selectedTask.assigned_by_name || `#${selectedTask.assigned_by_user_id}`}</div>
-              <div><strong>Site:</strong> {selectedTask.site_name || `#${selectedTask.site_id}`}</div>
+              <div>
+                <strong>Title:</strong> {selectedTask.task_title || '-'}
+              </div>
+              <div>
+                <strong>Description:</strong> {selectedTask.description || '-'}
+              </div>
+              <div>
+                <strong>Status:</strong> {normalizeStatus(selectedTask.task_status) === 'completed' ? 'Completed' : 'Pending'}
+              </div>
+              <div>
+                <strong>Assignee:</strong> {selectedTask.assigned_to_name || `#${selectedTask.assigned_to_user_id}`}
+              </div>
+              <div>
+                <strong>Assignee Role:</strong> {selectedTask.assigned_to_role || '-'}
+              </div>
+              <div>
+                <strong>Assigned By:</strong> {selectedTask.assigned_by_name || `#${selectedTask.assigned_by_user_id}`}
+              </div>
+              <div>
+                <strong>Site:</strong> {selectedTask.site_name || `#${selectedTask.site_id}`}
+              </div>
+              <div>
+                <strong>Community:</strong> {selectedTask.community_name || '-'}
+              </div>
               <div>
                 <strong>Estimated To Complete:</strong>{' '}
                 {selectedTask.estimated_to_complete
@@ -285,6 +306,36 @@ export default function AdminTasks() {
                 <strong>Updated At:</strong>{' '}
                 {selectedTask.updated_at ? new Date(selectedTask.updated_at).toLocaleString() : '-'}
               </div>
+
+              {normalizeStatus(selectedTask.task_status) === 'completed' ? (
+                <>
+                  <hr />
+                  <div className="fw-semibold text-body">Completion (from employee)</div>
+                  <div>
+                    <strong>Report:</strong> {selectedTask.completion_report?.trim() ? selectedTask.completion_report : '—'}
+                  </div>
+                  {(selectedTask.completion_image_urls || []).filter(Boolean).length > 0 ? (
+                    <div>
+                      <strong className="d-block mb-2">Photos:</strong>
+                      <div className="d-flex flex-wrap gap-2">
+                        {(selectedTask.completion_image_urls || [])
+                          .filter(Boolean)
+                          .map((url, i) => (
+                            <a key={i} href={url} target="_blank" rel="noreferrer">
+                              <img
+                                src={url}
+                                alt=""
+                                style={{ maxWidth: 140, maxHeight: 140, objectFit: 'cover', borderRadius: 8 }}
+                              />
+                            </a>
+                          ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-muted">No photos attached.</div>
+                  )}
+                </>
+              ) : null}
             </div>
           ) : null}
         </Modal.Body>
@@ -297,4 +348,3 @@ export default function AdminTasks() {
     </div>
   );
 }
-

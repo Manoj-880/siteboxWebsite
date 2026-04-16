@@ -1,0 +1,26 @@
+.admin-attendance .attendance-pie-wrap {
+  min-height: 1px;
+}
+
+.admin-attendance .attendance-pie-title {
+  font-weight: 500;
+}
+
+.admin-attendance .attendance-role-card .recharts-legend-wrapper {
+  font-size: 11px;
+}
+
+.admin-attendance .attendance-trend-chart {
+  width: 100%;
+}
+
+.admin-attendance .admin-page-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--sitex-text-primary, #1c1f24);
+}
+
+.admin-attendance .admin-page-subtitle {
+  color: var(--sitex-text-muted, #4a5565);
+  font-size: 0.95rem;
+}

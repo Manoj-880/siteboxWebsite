@@ -19,6 +19,77 @@ import {
 
 const delay = (ms = 300) => new Promise((r) => setTimeout(r, ms));
 
+function buildMockMaterialsCatalogData() {
+  return [
+    {
+      id: 11,
+      unit_id: 1,
+      unit: { id: 1, measuring_unit: 'sqft' },
+      material_name: 'Plywood',
+      image_url: null,
+      image_path: null,
+      brands: [
+        {
+          id: 1,
+          brand_name: 'Century',
+          brand_image_url: null,
+          brand_image: null,
+          thickness_links: [
+            {
+              id: 1,
+              thickness_code: 'PLY-CEN-18',
+              thickness: { id: 1, label: '18mm', value_mm: 18 },
+            },
+          ],
+        },
+      ],
+    },
+  ];
+}
+
+function filterMaterialsByQuery(materials, q) {
+  const s = String(q || '').trim().toLowerCase();
+  if (!s) return materials;
+  return materials.filter((m) => {
+    if (String(m.material_name || '').toLowerCase().includes(s)) return true;
+    return (m.brands || []).some((b) => {
+      if (String(b.brand_name || '').toLowerCase().includes(s)) return true;
+      return (b.thickness_links || []).some(
+        (l) =>
+          String(l.thickness_code || '').toLowerCase().includes(s) ||
+          String(l.thickness?.label || '').toLowerCase().includes(s)
+      );
+    });
+  });
+}
+
+/** Match server: with `q`, hide non-matching brands unless the material name matches `q`. */
+function narrowMaterialCatalogForSearchQuery(material, query) {
+  const q = String(query ?? '').trim();
+  if (!q) return material;
+  const ql = q.toLowerCase();
+  const matName = String(material.material_name ?? '').toLowerCase();
+  if (matName.includes(ql)) return material;
+
+  const brands = (material.brands || [])
+    .map((b) => {
+      const brandNameHit = String(b.brand_name ?? '').toLowerCase().includes(ql);
+      const allLinks = b.thickness_links || [];
+      const links = brandNameHit
+        ? allLinks
+        : allLinks.filter((l) => {
+            const code = String(l.thickness_code ?? '').toLowerCase();
+            const lab = String(l.thickness?.label ?? '').toLowerCase();
+            return code.includes(ql) || lab.includes(ql);
+          });
+      if (!brandNameHit && links.length === 0) return null;
+      return { ...b, thickness_links: links };
+    })
+    .filter(Boolean);
+
+  return { ...material, brands };
+}
+
 const authApi = {
   login: (mobile, password) =>
     delay().then(() => ({
@@ -120,6 +191,48 @@ const superAdminApi = {
         },
       };
     }),
+  uploadCatalogAsset: () =>
+    delay().then(() => ({
+      data: { success: true, data: { path: 'catalog/assets/mock.png' } },
+    })),
+  getMaterialsCatalog: (_adminId, params = {}) =>
+    delay().then(() => {
+      const q = String(params?.q || '').trim();
+      const filtered = filterMaterialsByQuery(buildMockMaterialsCatalogData(), q);
+      const materials = q
+        ? filtered.map((m) => narrowMaterialCatalogForSearchQuery(m, q))
+        : filtered;
+      return { data: { success: true, data: { materials } } };
+    }),
+  createMaterialCatalog: (body) =>
+    delay().then(() => ({
+      data: {
+        success: true,
+        message: 'Material created successfully',
+        data: {
+          material: {
+            id: Date.now(),
+            unit_id: body?.unit_id,
+            unit: { id: body?.unit_id, measuring_unit: 'unit' },
+            material_name: body?.material_name,
+            image_url: null,
+            brands: body?.brands || [],
+          },
+        },
+      },
+    })),
+  updateMaterialCatalog: (id, body) =>
+    delay().then(() => ({
+      data: {
+        success: true,
+        message: 'Material updated successfully',
+        data: { material: { id: Number(id), ...body } },
+      },
+    })),
+  deleteMaterialCatalog: () =>
+    delay().then(() => ({
+      data: { success: true, message: 'Material deleted successfully' },
+    })),
 };
 
 const dashboardApi = {
@@ -323,98 +436,6 @@ const adminApi = {
     delay().then(() => ({
       data: { success: true, data: { updates: [...dummyAdminUpdates] } },
     })),
-  getMaterialRequests: () =>
-    delay().then(() => ({
-      data: {
-        success: true,
-        data: {
-          material_requests: [
-            {
-              id: 1,
-              site_id: 10,
-              site_name: 'Villa Site A',
-              community_id: null,
-              community_name: null,
-              requested_by_user_id: 30,
-              requested_by_name: 'Supervisor One',
-              supervisor: {
-                id: 30,
-                name: 'Supervisor One',
-                mobile: '9000000002',
-                email: 'supervisor1@example.com',
-              },
-              site: {
-                id: 10,
-                site_name: 'Villa Site A',
-                client_name: 'Client A',
-                client_phone: '9000000010',
-                address: 'Main road',
-                coordinates: null,
-                budget: '100000',
-                status: 'active',
-                supervisor_id: 30,
-                designer_id: null,
-                community_id: null,
-                community_name: null,
-              },
-              status: 'pending',
-              created_at: new Date().toISOString(),
-              materials_count: 1,
-              items: [
-                {
-                  material_id: 11,
-                  material_name: 'Plywood',
-                  brand_name: 'Century',
-                  thickness_label: '18mm',
-                  finishing_name: 'Matte',
-                  measuring_unit: 'sqft',
-                  quantity_requested: 100,
-                  quantity_ordered: 20,
-                  quantity_remaining: 80,
-                },
-              ],
-            },
-          ],
-        },
-      },
-    })),
-  createMaterialRequestOrder: () =>
-    delay().then(() => ({
-      data: {
-        success: true,
-        message: 'Order created successfully',
-        data: { material_request_approved: false },
-      },
-    })),
-  getMaterialRequestOrders: () =>
-    delay().then(() => ({
-      data: {
-        success: true,
-        data: {
-          orders: [
-            {
-              id: 501,
-              material_request_id: 1,
-              site_name: 'Villa Site A',
-              vendor_name: 'Vendor One',
-              order_status: 'active',
-              created_at: new Date().toISOString(),
-              items: [
-                {
-                  id: 1,
-                  material_name: 'Plywood',
-                  brand_name: 'Century',
-                  thickness_label: '18mm',
-                  finishing_name: 'Matte',
-                  measuring_unit: 'sqft',
-                  quantity: 20,
-                },
-              ],
-            },
-          ],
-        },
-      },
-    })),
   getTasksWeb: () =>
     delay().then(() => ({
       data: {
@@ -437,6 +458,23 @@ const adminApi = {
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             },
+            {
+              id: 2,
+              task_title: 'Paint touch-up',
+              description: null,
+              task_status: 'completed',
+              completion_report: 'Touched up living room corners.',
+              completion_image_urls: [],
+              assigned_to_user_id: 41,
+              assigned_to_name: 'Supervisor One',
+              assigned_to_role: 'Supervisor',
+              assigned_by_user_id: 2,
+              assigned_by_name: 'Admin User',
+              site_id: 10,
+              site_name: 'Villa Site A',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
           ],
         },
       },
@@ -451,7 +489,7 @@ const adminApi = {
             id: Date.now(),
             task_title: body?.task_title ?? 'Task',
             description: body?.description ?? null,
-            task_status: body?.task_status ?? 'pending',
+            task_status: 'pending',
             assigned_to_user_id: Number(body?.assigned_to_user_id ?? 41),
             assigned_to_name: 'Supervisor One',
             assigned_to_role: 'Supervisor',
@@ -470,74 +508,20 @@ const adminApi = {
     delay().then(() => ({
       data: { success: true, data: { units: [...dummyUnits] } },
     })),
-  getCategories: () =>
-    delay().then(() => ({
-      data: {
-        success: true,
+  getMaterials: (_adminId, params = {}) =>
+    delay().then(() => {
+      const q = String(params?.q || '').trim();
+      const filtered = filterMaterialsByQuery(buildMockMaterialsCatalogData(), q);
+      const materials = q
+        ? filtered.map((m) => narrowMaterialCatalogForSearchQuery(m, q))
+        : filtered;
+      return {
         data: {
-          categories: [
-            { id: 1, name: 'Wood' },
-            { id: 2, name: 'Cement' },
-          ],
+          success: true,
+          data: { materials },
         },
-      },
-    })),
-  createCategory: (body) =>
-    delay().then(() => ({
-      data: {
-        success: true,
-        message: 'Category created successfully',
-        data: { category: { id: Date.now(), name: body?.name || 'Category' } },
-      },
-    })),
-  updateCategory: (id, body) =>
-    delay().then(() => ({
-      data: {
-        success: true,
-        message: 'Category updated successfully',
-        data: { category: { id: Number(id), name: body?.name || 'Category' } },
-      },
-    })),
-  getMaterialsByCategory: (categoryId) =>
-    delay().then(() => ({
-      data: {
-        success: true,
-        data: {
-          category: { id: Number(categoryId), name: Number(categoryId) === 1 ? 'Wood' : 'Cement' },
-          materials: [
-            {
-              id: 11,
-              category_id: Number(categoryId),
-              unit_id: 1,
-              material_name: 'Plywood',
-              material_description: 'BWR grade',
-              record_status: 'active',
-              category: { id: Number(categoryId), name: Number(categoryId) === 1 ? 'Wood' : 'Cement' },
-              unit: { id: 1, measuring_unit: 'sqft' },
-              brands: [{ id: 1, brand: { name: 'Century' } }],
-              finishings: [{ id: 1, finishing: { name: 'Matte' } }],
-              thicknesses: [{ id: 1, thickness: { label: '18mm', value_mm: 18 } }],
-            },
-          ],
-        },
-      },
-    })),
-  createMaterial: (body) =>
-    delay().then(() => ({
-      data: {
-        success: true,
-        message: 'Material created successfully',
-        data: { material: { id: Date.now(), ...body } },
-      },
-    })),
-  updateMaterial: (id, body) =>
-    delay().then(() => ({
-      data: {
-        success: true,
-        message: 'Material updated successfully',
-        data: { material: { id: Number(id), ...body } },
-      },
-    })),
+      };
+    }),
   getMaterialSuppliers: (materialId) =>
     delay().then(() => ({
       data: {
@@ -566,11 +550,139 @@ const adminApi = {
     })),
   getEmployeesWeb: () =>
     delay().then(() => ({ data: { success: true, data: [{ adminId: 41, username: 'Vendor One', mobile: '9000000001' }] } })),
+  getAttendanceWeb: (params) =>
+    delay().then(() => {
+      const date =
+        params?.date ||
+        new Date().toISOString().slice(0, 10);
+      const days = Math.min(30, Math.max(1, Number(params?.days) || 7));
+      const trend = [];
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(date);
+        d.setDate(d.getDate() - i);
+        const ds = d.toISOString().slice(0, 10);
+        trend.push({
+          date: ds,
+          total: 12,
+          present: 8 + (i % 3),
+          absent: 1,
+          unmarked: 3 - (i % 3),
+        });
+      }
+      return {
+        data: {
+          success: true,
+          data: {
+            selected_date: date,
+            trend_days: days,
+            overall: { total: 12, present: 9, absent: 1, unmarked: 2 },
+            by_role: [
+              {
+                user_role_id: 3,
+                role_name: 'Supervisor',
+                total: 4,
+                present: 3,
+                absent: 0,
+                unmarked: 1,
+              },
+              {
+                user_role_id: 4,
+                role_name: 'Designer',
+                total: 3,
+                present: 2,
+                absent: 1,
+                unmarked: 0,
+              },
+              {
+                user_role_id: 6,
+                role_name: 'Vendor',
+                total: 5,
+                present: 4,
+                absent: 0,
+                unmarked: 1,
+              },
+            ],
+            employees: [
+              {
+                user_id: 101,
+                username: 'Supervisor One',
+                email: 's1@example.com',
+                mobile: '9000000001',
+                user_role_id: 3,
+                role_name: 'Supervisor',
+                attendance_status: 'present',
+              },
+              {
+                user_id: 102,
+                username: 'Designer One',
+                email: null,
+                mobile: '9000000002',
+                user_role_id: 4,
+                role_name: 'Designer',
+                attendance_status: 'absent',
+              },
+            ],
+            trend,
+          },
+        },
+      };
+    }),
   addEmployeeWeb: () =>
     delay().then(() => ({
       data: { success: true, message: 'Employee created', data: { user_id: 1 } },
     })),
 };
 
-export default { authApi, companiesApi, superAdminApi, dashboardApi, rolesApi, adminApi };
-export { authApi, companiesApi, superAdminApi, dashboardApi, rolesApi, adminApi };
+const myTasksApi = {
+  getMyTasks: () =>
+    delay().then(() => ({
+      data: {
+        success: true,
+        data: {
+          tasks: [
+            {
+              id: 1,
+              task_title: 'Site inspection',
+              description: 'Check safety signage',
+              task_status: 'pending',
+              site_id: 10,
+              site_name: 'Villa Site A',
+              community_name: 'Green Meadows',
+              assigned_to_user_id: 41,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            {
+              id: 2,
+              task_title: 'Material verification',
+              task_status: 'completed',
+              completion_report: 'Verified stock against PO.',
+              completion_image_urls: [],
+              site_id: 10,
+              site_name: 'Villa Site A',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+          ],
+        },
+      },
+    })),
+  completeTask: (taskId) =>
+    delay().then(() => ({
+      data: {
+        success: true,
+        message: 'Task marked as completed',
+        data: {
+          task: {
+            id: Number(taskId),
+            task_status: 'completed',
+            completion_report: 'Done (mock).',
+            completion_image_urls: [],
+          },
+        },
+      },
+    })),
+};
+
+export default { authApi, companiesApi, superAdminApi, dashboardApi, rolesApi, adminApi, myTasksApi };
+export { authApi, companiesApi, superAdminApi, dashboardApi, rolesApi, adminApi, myTasksApi };

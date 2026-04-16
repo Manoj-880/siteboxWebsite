@@ -47,6 +47,7 @@ export const ROLE_ACCESS = {
   [ROLE_IDS.SUPER_ADMIN]: [
     'Full system access',
     'Manage all companies and company admins',
+    'Manage global materials catalog (shared by all companies)',
     'Manage units (measuring units)',
     'View dashboard and all statistics',
     'Manage your own profile and password',
@@ -55,7 +56,7 @@ export const ROLE_ACCESS = {
     'Manage your company',
     'Manage employees, sites, and tasks',
     'View company dashboard and reports',
-    'Manage materials and orders',
+    'Browse the global materials catalog',
     'Manage your own profile and password',
   ],
   [ROLE_IDS.SUPERVISOR]: [
@@ -73,7 +74,7 @@ export const ROLE_ACCESS = {
     'Manage your own profile and password',
   ],
   [ROLE_IDS.VENDOR]: [
-    'View vendor-related materials and orders',
+    'View assigned site information where applicable',
     'Manage your own profile and password',
   ],
 };
