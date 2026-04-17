@@ -36,6 +36,8 @@
   /* Shadows */
   --sitex-shadow-light: rgba(0, 0, 0, 0.05);
   --sitex-shadow: rgba(0, 0, 0, 0.1);
+  /* Brand mark: same idea as marketing site — square box, width = height */
+  --logo-mark-size: clamp(52px, 7.5dvh, 72px);
 }
 
 /* Hide scrollbars across the application */
@@ -1350,6 +1352,11 @@ a:hover {
   border-right: 1px solid var(--sitex-border-gray);
   display: flex;
   flex-direction: column;
+  transition: width 0.2s ease, border-right-color 0.2s ease;
+}
+.app-layout-sidebar.collapsed {
+  width: 0;
+  border-right-color: transparent;
 }
 .app-layout-brand {
   padding: 1rem 1.25rem;
@@ -1357,10 +1364,36 @@ a:hover {
 }
 .app-layout-brand-link {
   font-weight: 700;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   color: var(--sitex-text-primary) !important;
   text-decoration: none;
   letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+.app-layout-brand-mark {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+  width: var(--logo-mark-size);
+  height: var(--logo-mark-size);
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(43, 127, 255, 0.28);
+}
+.app-layout-brand-logo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+  object-position: 50% 50%;
+  display: block;
 }
 .app-layout-brand-link:hover {
   color: var(--sitex-primary-alt) !important;
@@ -1404,6 +1437,12 @@ a:hover {
   padding: 0 1.25rem;
   background-color: var(--sitex-bg-white);
   border-bottom: 1px solid var(--sitex-border-gray);
+}
+.app-layout-header-menu-btn {
+  line-height: 1;
+  min-width: 34px;
+  padding-left: 0.45rem;
+  padding-right: 0.45rem;
 }
 .app-layout-header-title {
   font-size: 1.25rem;

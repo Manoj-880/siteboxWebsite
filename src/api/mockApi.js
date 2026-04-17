@@ -163,6 +163,29 @@ const superAdminApi = {
     delay().then(() => ({
       data: { success: true, message: 'Company deleted successfully' },
     })),
+  getCompanyOnboardingRequests: () =>
+    delay().then(() => ({
+      data: {
+        success: true,
+        data: {
+          requests: [
+            {
+              id: 1,
+              company_name: 'Aurum Interiors',
+              contact_person: 'Neha Rao',
+              email: 'neha@auruminteriors.com',
+              mobile: '9876543210',
+              city: 'Hyderabad',
+              address: 'Banjara Hills, Hyderabad',
+              employee_count: 24,
+              notes: 'Looking for multi-project rollout and vendor tracking.',
+              request_status: 'pending',
+              created_at: new Date().toISOString(),
+            },
+          ],
+        },
+      },
+    })),
   createAdmin: () =>
     delay().then(() => ({
       data: {
@@ -684,5 +707,196 @@ const myTasksApi = {
     })),
 };
 
-export default { authApi, companiesApi, superAdminApi, dashboardApi, rolesApi, adminApi, myTasksApi };
-export { authApi, companiesApi, superAdminApi, dashboardApi, rolesApi, adminApi, myTasksApi };
+const designerApi = {
+  getDashboard: () =>
+    delay().then(() => ({
+      data: {
+        success: true,
+        data: {
+          attendance_status: null,
+          sites: { total: 2 },
+          tasks: { total: 2 },
+          recent_updates: [
+            {
+              id: 2001,
+              site_id: 10,
+              site_name: 'Villa Site A',
+              update_description: 'Need revised false-ceiling alignment in living room.',
+              updated_by_name: 'Supervisor One',
+              update_status: 'review',
+            },
+          ],
+        },
+      },
+    })),
+  getSites: () =>
+    delay().then(() => ({
+      data: {
+        success: true,
+        data: {
+          individualSites: [
+            { id: 10, site_name: 'Villa Site A', client_name: 'Client A', address: 'Road 1, City', status: 'active' },
+            { id: 11, site_name: 'House 12', client_name: 'Client B', address: 'Road 2, City', status: 'active' },
+          ],
+        },
+      },
+    })),
+  getSiteDetails: (siteId) =>
+    delay().then(() => ({
+      data: {
+        success: true,
+        data: {
+          site_detail: {
+            id: Number(siteId),
+            site_name: Number(siteId) === 11 ? 'House 12' : 'Villa Site A',
+            client_name: Number(siteId) === 11 ? 'Client B' : 'Client A',
+            address: 'Sample address',
+            status: 'active',
+          },
+          site_files: [
+            {
+              id: 1,
+              file_name: 'design-v1.pdf',
+              file_url: 'https://example.com/design-v1.pdf',
+              created_at: new Date().toISOString(),
+            },
+          ],
+          site_updates: [
+            {
+              id: 2001,
+              update_description: 'Need revised false-ceiling alignment in living room.',
+              update_status: 'review',
+              updated_by_name: 'Supervisor One',
+              review_remarks: null,
+              files: [],
+            },
+          ],
+        },
+      },
+    })),
+  reviewSiteUpdate: () =>
+    delay().then(() => ({
+      data: { success: true, message: 'Update reviewed successfully' },
+    })),
+  createTaskForSupervisor: () =>
+    delay().then(() => ({
+      data: { success: true, message: 'Task created successfully' },
+    })),
+  addFilesToSite: () =>
+    delay().then(() => ({
+      data: { success: true, message: 'Files uploaded successfully' },
+    })),
+};
+
+const vendorApi = {
+  getDashboard: () =>
+    delay().then(() => ({
+      data: {
+        success: true,
+        data: {
+          attendance_status: null,
+          sites: { total: 2 },
+          tasks: { total: 2 },
+          orders: { total: 2 },
+          recent_orders: [
+            { id: 501, site_name: 'Villa Site A', order_status: 'created', amount: 12000 },
+            { id: 502, site_name: 'House 12', order_status: 'taken', amount: 8000 },
+          ],
+        },
+      },
+    })),
+  getSites: () =>
+    delay().then(() => ({
+      data: {
+        success: true,
+        data: {
+          individualSites: [
+            { id: 10, site_name: 'Villa Site A', client_name: 'Client A', address: 'Road 1, City', status: 'active' },
+            { id: 11, site_name: 'House 12', client_name: 'Client B', address: 'Road 2, City', status: 'active' },
+          ],
+        },
+      },
+    })),
+  getSiteDetails: (siteId) =>
+    delay().then(() => ({
+      data: {
+        success: true,
+        data: {
+          site_detail: { id: Number(siteId), site_name: 'Villa Site A', client_name: 'Client A' },
+          orders: [
+            {
+              id: 501,
+              site_name: 'Villa Site A',
+              order_status: 'created',
+              amount: 12000,
+              items: [{ id: 1, material_name: 'Plywood', quantity: 10, measuring_unit: 'sqft' }],
+            },
+          ],
+        },
+      },
+    })),
+  getOrders: () =>
+    delay().then(() => ({
+      data: {
+        success: true,
+        data: {
+          orders: [
+            {
+              id: 501,
+              site_name: 'Villa Site A',
+              order_status: 'created',
+              amount: 12000,
+              items: [{ id: 1, material_name: 'Plywood', quantity: 10, measuring_unit: 'sqft' }],
+            },
+            {
+              id: 502,
+              site_name: 'House 12',
+              order_status: 'taken',
+              amount: 8000,
+              items: [{ id: 2, material_name: 'Laminate', quantity: 25, measuring_unit: 'sqft', unit_price: 120 }],
+            },
+          ],
+        },
+      },
+    })),
+  markOrderTaken: () =>
+    delay().then(() => ({
+      data: { success: true, message: 'Order marked taken' },
+    })),
+  markOrderDispatched: () =>
+    delay().then(() => ({
+      data: { success: true, message: 'Order marked dispatched' },
+    })),
+};
+
+const attendanceApi = {
+  mark: () =>
+    delay().then(() => ({
+      data: { success: true, message: 'Attendance marked successfully' },
+    })),
+};
+
+export default {
+  authApi,
+  companiesApi,
+  superAdminApi,
+  dashboardApi,
+  rolesApi,
+  adminApi,
+  myTasksApi,
+  designerApi,
+  vendorApi,
+  attendanceApi,
+};
+export {
+  authApi,
+  companiesApi,
+  superAdminApi,
+  dashboardApi,
+  rolesApi,
+  adminApi,
+  myTasksApi,
+  designerApi,
+  vendorApi,
+  attendanceApi,
+};

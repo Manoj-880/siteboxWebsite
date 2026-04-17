@@ -13,6 +13,7 @@ import CompanyForm from './pages/superadmin/CompanyForm';
 import Admins from './pages/superadmin/Admins';
 import Units from './pages/superadmin/Units';
 import Profile from './pages/superadmin/Profile';
+import Requests from './pages/superadmin/Requests';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminUpdates from './pages/admin/Updates';
 import AdminSites from './pages/admin/Sites';
@@ -29,8 +30,13 @@ import AdminAttendance from './pages/admin/Attendance';
 import SupervisorDashboard from './pages/supervisor/Dashboard';
 import SupervisorTasks from './pages/supervisor/Tasks';
 import DesignerDashboard from './pages/designer/Dashboard';
+import DesignerSites from './pages/designer/Sites';
+import DesignerSiteDetails from './pages/designer/SiteDetails';
 import ContractorDashboard from './pages/contractor/Dashboard';
 import VendorDashboard from './pages/vendor/Dashboard';
+import VendorSites from './pages/vendor/Sites';
+import VendorSiteDetails from './pages/vendor/SiteDetails';
+import VendorOrders from './pages/vendor/Orders';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -84,6 +90,7 @@ function AppRoutes() {
         <Route path="admins" element={<Admins />} />
         <Route path="units" element={<Units />} />
         <Route path="materials" element={<SuperAdminMaterials />} />
+        <Route path="requests" element={<Requests />} />
         <Route path="profile" element={<Profile />} />
       </Route>
 
@@ -139,13 +146,18 @@ function AppRoutes() {
               <RoleLayout
                 basePath="/designer"
                 roleLabel="Designer"
-                extraNavLinks={[{ to: '/designer/tasks', end: true, label: 'My tasks' }]}
+                extraNavLinks={[
+                  { to: '/designer/sites', end: false, label: 'Sites' },
+                  { to: '/designer/tasks', end: true, label: 'My tasks' },
+                ]}
               />
             </RoleRoute>
           </PrivateRoute>
         }
       >
         <Route index element={<DesignerDashboard />} />
+        <Route path="sites" element={<DesignerSites />} />
+        <Route path="sites/:siteId" element={<DesignerSiteDetails />} />
         <Route path="tasks" element={<SupervisorTasks />} />
       </Route>
 
@@ -172,13 +184,20 @@ function AppRoutes() {
               <RoleLayout
                 basePath="/vendor"
                 roleLabel="Vendor"
-                extraNavLinks={[{ to: '/vendor/tasks', end: true, label: 'My tasks' }]}
+                extraNavLinks={[
+                  { to: '/vendor/sites', end: false, label: 'Sites' },
+                  { to: '/vendor/orders', end: false, label: 'Orders' },
+                  { to: '/vendor/tasks', end: true, label: 'My tasks' },
+                ]}
               />
             </RoleRoute>
           </PrivateRoute>
         }
       >
         <Route index element={<VendorDashboard />} />
+        <Route path="sites" element={<VendorSites />} />
+        <Route path="sites/:siteId" element={<VendorSiteDetails />} />
+        <Route path="orders" element={<VendorOrders />} />
         <Route path="tasks" element={<SupervisorTasks />} />
       </Route>
 

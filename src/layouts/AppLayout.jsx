@@ -13,6 +13,7 @@ export default function AppLayout({ navLinks, basePath, roleLabel }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -23,11 +24,26 @@ export default function AppLayout({ navLinks, basePath, roleLabel }) {
     (l) => l.to === location.pathname || (!l.end && location.pathname.startsWith(l.to + '/'))
   )?.label ?? 'Dashboard';
 
+  const toggleMenu = () => {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 991.98px)').matches) {
+      setSidebarOpen((prev) => !prev);
+      return;
+    }
+    setSidebarCollapsed((prev) => !prev);
+  };
+
   const SideNavContent = () => (
     <>
       <div className="app-layout-brand">
-        <NavLink to={basePath} className="app-layout-brand-link" onClick={() => setSidebarOpen(false)}>
-          Sitex
+        <NavLink
+          to={basePath}
+          className="app-layout-brand-link"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Sitebox home"
+        >
+          <span className="app-layout-brand-mark">
+            <img src="/sitebox.jpeg" alt="Sitebox" className="app-layout-brand-logo" width="72" height="72" />
+          </span>
         </NavLink>
       </div>
       <Nav className="app-layout-nav flex-column">
@@ -50,7 +66,7 @@ export default function AppLayout({ navLinks, basePath, roleLabel }) {
   return (
     <div className="app-layout">
       {/* Desktop sidebar */}
-      <aside className="app-layout-sidebar d-none d-lg-block">
+      <aside className={`app-layout-sidebar d-none d-lg-block${sidebarCollapsed ? ' collapsed' : ''}`}>
         <SideNavContent />
       </aside>
 
@@ -83,7 +99,18 @@ export default function AppLayout({ navLinks, basePath, roleLabel }) {
       {/* Main: header + content */}
       <div className="app-layout-main">
         <header className="app-layout-header">
-          <h1 className="app-layout-header-title">{currentLabel}</h1>
+          <div className="d-flex align-items-center gap-2">
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              className="app-layout-header-menu-btn"
+              onClick={toggleMenu}
+              aria-label="Toggle navigation menu"
+            >
+              ☰
+            </Button>
+            <h1 className="app-layout-header-title">{currentLabel}</h1>
+          </div>
           <div className="app-layout-header-actions align-items-center gap-2">
             <span className="app-layout-header-user">{user?.username}</span>
             <Button variant="outline-secondary" size="sm" onClick={handleLogout}>

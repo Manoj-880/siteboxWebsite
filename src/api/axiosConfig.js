@@ -43,6 +43,9 @@ import {
   rolesApi as mockRolesApi,
   adminApi as mockAdminApi,
   myTasksApi as mockMyTasksApi,
+  designerApi as mockDesignerApi,
+  vendorApi as mockVendorApi,
+  attendanceApi as mockAttendanceApi,
 } from './mockApi';
 
 // Real API handlers
@@ -64,6 +67,7 @@ const realSuperAdminApi = {
   updateCompany: (id, formData) =>
     api.put(`/companies/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   deleteCompany: (id) => api.delete(`/companies/${id}`),
+  getCompanyOnboardingRequests: () => api.get('/superAdmin/company-onboarding-requests'),
   createAdmin: (data) => api.post('/admin/create', data),
   getUnits: () => api.get('/web/super-admin/get-units'),
   createUnit: (data) => api.post('/web/super-admin/add-units', data),
@@ -158,6 +162,32 @@ const realMyTasksApi = {
   completeTask: (taskId, formData) => api.post(`/my-tasks/${taskId}/complete`, formData),
 };
 
+const realDesignerApi = {
+  getDashboard: (date) => api.get('/employee/designer/dashboard', { params: date ? { date } : {} }),
+  getSites: () => api.get('/employee/sites'),
+  getSiteDetails: (siteId, date) =>
+    api.get(`/employee/sites/${siteId}`, { params: date ? { date } : {} }),
+  reviewSiteUpdate: (updateId, body) => api.put(`/employee/site-updates/${updateId}/review`, body),
+  createTaskForSupervisor: (siteId, body) => api.post(`/employee/sites/${siteId}/tasks`, body),
+  addFilesToSite: (siteId, formData) =>
+    api.post(`/employee/sites/${siteId}/files`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+};
+
+const realVendorApi = {
+  getDashboard: (date) => api.get('/vendor/dashboard', { params: date ? { date } : {} }),
+  getSites: () => api.get('/employee/sites'),
+  getSiteDetails: (siteId) => api.get(`/employee/sites/${siteId}`),
+  getOrders: () => api.get('/vendor/orders'),
+  markOrderTaken: (orderId, body) => api.put(`/vendor/orders/${orderId}/taken`, body),
+  markOrderDispatched: (orderId) => api.put(`/vendor/orders/${orderId}/dispatched`),
+};
+
+const realAttendanceApi = {
+  mark: (body) => api.post('/attendance/mark', body),
+};
+
 // Export mock or real based on env
 export default api;
 
@@ -169,3 +199,6 @@ export const dashboardApi = USE_MOCK ? mockDashboardApi : realDashboardApi;
 export const rolesApi = USE_MOCK ? mockRolesApi : realRolesApi;
 export const adminApi = USE_MOCK ? mockAdminApi : realAdminApi;
 export const myTasksApi = USE_MOCK ? mockMyTasksApi : realMyTasksApi;
+export const designerApi = USE_MOCK ? mockDesignerApi : realDesignerApi;
+export const vendorApi = USE_MOCK ? mockVendorApi : realVendorApi;
+export const attendanceApi = USE_MOCK ? mockAttendanceApi : realAttendanceApi;
