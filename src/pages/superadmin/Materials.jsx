@@ -71,12 +71,19 @@ export default function SuperAdminMaterials() {
   const [brandSelect, setBrandSelect] = useState('');
   const [approvalForm, setApprovalForm] = useState({
     category_name: '',
+    category_image_path: '',
     brand_name: '',
+    brand_image_path: '',
     material_name: '',
     material_code: '',
     unit_id: '',
+    image_path: '',
+    thickness_rows: [emptyThicknessRow()],
     super_admin_notes: ''
   });
+  const [approvalMaterialImageFile, setApprovalMaterialImageFile] = useState(null);
+  const [approvalCategoryImageFile, setApprovalCategoryImageFile] = useState(null);
+  const [approvalBrandImageFile, setApprovalBrandImageFile] = useState(null);
 
   const uploadFile = async (file) => {
     const fd = new FormData();
@@ -264,15 +271,28 @@ export default function SuperAdminMaterials() {
   };
 
   const openApproveModal = (submission) => {
+    const rows =
+      (submission?.thickness_rows || []).map((row) => ({
+        key: `a-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        label: row?.label || '',
+        value_mm: row?.value_mm != null && row?.value_mm !== '' ? String(row.value_mm) : ''
+      })) || [];
     setApprovingSubmission(submission);
     setApprovalForm({
       category_name: submission.category_name || '',
+      category_image_path: submission.category_image_path || '',
       brand_name: submission.brand_name || '',
+      brand_image_path: submission.brand_image_path || '',
       material_name: submission.material_name || '',
       material_code: submission.material_code || '',
       unit_id: submission.unit_id ? String(submission.unit_id) : '',
+      image_path: submission.image_path || '',
+      thickness_rows: rows.length ? rows : [emptyThicknessRow()],
       super_admin_notes: ''
     });
+    setApprovalMaterialImageFile(null);
+    setApprovalCategoryImageFile(null);
+    setApprovalBrandImageFile(null);
     setShowApproveModal(true);
   };
 
@@ -287,15 +307,45 @@ export default function SuperAdminMaterials() {
       setError('Unit is required for approval.');
       return;
     }
+
     setSaving(true);
     setError('');
     try {
+      let categoryImagePath = approvalForm.category_image_path?.trim() || null;
+      if (approvalCategoryImageFile) {
+        categoryImagePath = await uploadFile(approvalCategoryImageFile);
+      }
+      let brandImagePath = approvalForm.brand_image_path?.trim() || null;
+      if (approvalBrandImageFile) {
+        brandImagePath = await uploadFile(approvalBrandImageFile);
+      }
+      let materialImagePath = approvalForm.image_path?.trim() || null;
+      if (approvalMaterialImageFile) {
+        materialImagePath = await uploadFile(approvalMaterialImageFile);
+      }
+
+      const thicknesses = [];
+      for (const row of approvalForm.thickness_rows || []) {
+        const label = String(row.label ?? '').trim();
+        if (!label) continue;
+        const vmRaw = String(row.value_mm ?? '').trim();
+        const value_mm = vmRaw === '' ? undefined : Number(vmRaw);
+        thicknesses.push({
+          label,
+          ...(value_mm !== undefined && !Number.isNaN(value_mm) ? { value_mm } : {})
+        });
+      }
+
       await superAdminApi.approveTemporaryMaterial(approvingSubmission.id, adminId, {
         category_name: approvalForm.category_name.trim(),
+        category_image_path: categoryImagePath,
         brand_name: approvalForm.brand_name.trim(),
+        brand_image_path: brandImagePath,
         material_name: approvalForm.material_name.trim(),
         material_code: approvalForm.material_code.trim(),
         unit_id: Number(approvalForm.unit_id),
+        image_path: materialImagePath,
+        thicknesses,
         super_admin_notes: approvalForm.super_admin_notes.trim() || null
       });
       setShowApproveModal(false);
@@ -306,6 +356,29 @@ export default function SuperAdminMaterials() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const updateApprovalThicknessRow = (rowKey, patch) => {
+    setApprovalForm((f) => ({
+      ...f,
+      thickness_rows: (f.thickness_rows || []).map((r) => (r.key === rowKey ? { ...r, ...patch } : r))
+    }));
+  };
+
+  const addApprovalThicknessRow = () => {
+    setApprovalForm((f) => ({
+      ...f,
+      thickness_rows: [...(f.thickness_rows || []), emptyThicknessRow()]
+    }));
+  };
+
+  const removeApprovalThicknessRow = (rowKey) => {
+    setApprovalForm((f) => ({
+      ...f,
+      thickness_rows: (f.thickness_rows || []).filter((r) => r.key !== rowKey).length
+        ? (f.thickness_rows || []).filter((r) => r.key !== rowKey)
+        : [emptyThicknessRow()]
+    }));
   };
 
   const updateThicknessRow = (rowKey, patch) => {
@@ -349,6 +422,27 @@ export default function SuperAdminMaterials() {
     );
     return [...rows, OTHER_OPTION];
   }, [materialTree, form.category_name]);
+
+  const approvalCategoryOptions = useMemo(() => {
+    const rows = Array.from(new Set((materialTree || []).map((x) => x.category_name).filter(Boolean))).sort((a, b) =>
+      a.localeCompare(b)
+    );
+    if (approvalForm.category_name && !rows.includes(approvalForm.category_name)) {
+      rows.unshift(approvalForm.category_name);
+    }
+    return rows;
+  }, [materialTree, approvalForm.category_name]);
+
+  const approvalBrandOptions = useMemo(() => {
+    const selectedCategory = (materialTree || []).find((x) => x.category_name === approvalForm.category_name);
+    const rows = Array.from(new Set((selectedCategory?.brands || []).map((b) => b.brand_name).filter(Boolean))).sort(
+      (a, b) => a.localeCompare(b)
+    );
+    if (approvalForm.brand_name && !rows.includes(approvalForm.brand_name)) {
+      rows.unshift(approvalForm.brand_name);
+    }
+    return rows;
+  }, [materialTree, approvalForm.category_name, approvalForm.brand_name]);
 
   return (
     <div className="materials-catalog-page">
@@ -709,19 +803,42 @@ export default function SuperAdminMaterials() {
           <Form onSubmit={approveSubmission}>
             <Form.Group className="mb-2">
               <Form.Label>Category</Form.Label>
-              <Form.Control
+              <Form.Select
                 value={approvalForm.category_name}
-                onChange={(e) => setApprovalForm((f) => ({ ...f, category_name: e.target.value }))}
+                onChange={(e) =>
+                  setApprovalForm((f) => ({
+                    ...f,
+                    category_name: e.target.value,
+                    brand_name: ''
+                  }))
+                }
                 required
-              />
+              >
+                <option value="">Select category...</option>
+                {approvalCategoryOptions.map((categoryName) => (
+                  <option key={categoryName} value={categoryName}>
+                    {categoryName}
+                  </option>
+                ))}
+              </Form.Select>
             </Form.Group>
             <Form.Group className="mb-2">
               <Form.Label>Brand</Form.Label>
-              <Form.Control
+              <Form.Select
                 value={approvalForm.brand_name}
                 onChange={(e) => setApprovalForm((f) => ({ ...f, brand_name: e.target.value }))}
+                disabled={!approvalForm.category_name}
                 required
-              />
+              >
+                <option value="">
+                  {approvalForm.category_name ? 'Select brand...' : 'Select category first'}
+                </option>
+                {approvalBrandOptions.map((brandName) => (
+                  <option key={brandName} value={brandName}>
+                    {brandName}
+                  </option>
+                ))}
+              </Form.Select>
             </Form.Group>
             <Form.Group className="mb-2">
               <Form.Label>Material name</Form.Label>
@@ -739,6 +856,39 @@ export default function SuperAdminMaterials() {
               />
             </Form.Group>
             <Form.Group className="mb-2">
+              <Form.Label>Category image</Form.Label>
+              <Form.Control
+                type="file"
+                accept="image/*"
+                onChange={(e) => setApprovalCategoryImageFile(e.target.files?.[0] || null)}
+              />
+              {!approvalCategoryImageFile && approvalForm.category_image_path ? (
+                <Form.Text className="text-muted">Current path: {approvalForm.category_image_path}</Form.Text>
+              ) : null}
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Brand image</Form.Label>
+              <Form.Control
+                type="file"
+                accept="image/*"
+                onChange={(e) => setApprovalBrandImageFile(e.target.files?.[0] || null)}
+              />
+              {!approvalBrandImageFile && approvalForm.brand_image_path ? (
+                <Form.Text className="text-muted">Current path: {approvalForm.brand_image_path}</Form.Text>
+              ) : null}
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Material image</Form.Label>
+              <Form.Control
+                type="file"
+                accept="image/*"
+                onChange={(e) => setApprovalMaterialImageFile(e.target.files?.[0] || null)}
+              />
+              {!approvalMaterialImageFile && approvalForm.image_path ? (
+                <Form.Text className="text-muted">Current path: {approvalForm.image_path}</Form.Text>
+              ) : null}
+            </Form.Group>
+            <Form.Group className="mb-2">
               <Form.Label>Unit</Form.Label>
               <Form.Select
                 value={approvalForm.unit_id}
@@ -753,6 +903,46 @@ export default function SuperAdminMaterials() {
                 ))}
               </Form.Select>
             </Form.Group>
+            <div className="small text-muted mb-1">Thicknesses</div>
+            {(approvalForm.thickness_rows || []).map((row) => (
+              <div key={row.key} className="materials-catalog-thickness-row mb-2">
+                <Row className="g-1 align-items-end">
+                  <Col xs={12} sm={7}>
+                    <Form.Label className="small mb-0">Label</Form.Label>
+                    <Form.Control
+                      size="sm"
+                      value={row.label}
+                      onChange={(e) => updateApprovalThicknessRow(row.key, { label: e.target.value })}
+                      placeholder="18mm"
+                    />
+                  </Col>
+                  <Col xs={8} sm={4}>
+                    <Form.Label className="small mb-0">mm (opt.)</Form.Label>
+                    <Form.Control
+                      size="sm"
+                      value={row.value_mm}
+                      onChange={(e) => updateApprovalThicknessRow(row.key, { value_mm: e.target.value })}
+                      placeholder="18"
+                    />
+                  </Col>
+                  <Col xs={4} sm={1} className="text-end">
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="text-danger py-0 px-0"
+                      title="Remove row"
+                      onClick={() => removeApprovalThicknessRow(row.key)}
+                    >
+                      ×
+                    </Button>
+                  </Col>
+                </Row>
+              </div>
+            ))}
+            <Button type="button" variant="outline-secondary" size="sm" className="mb-3" onClick={addApprovalThicknessRow}>
+              + Thickness
+            </Button>
             <Form.Group className="mb-3">
               <Form.Label>Notes (optional)</Form.Label>
               <Form.Control
