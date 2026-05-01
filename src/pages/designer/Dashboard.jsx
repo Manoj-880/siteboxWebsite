@@ -109,7 +109,7 @@ export default function DesignerDashboard() {
             <p className="small text-muted mb-0">Review site updates, add files, and create tasks for supervisors.</p>
           </div>
           <Button size="sm" onClick={markAttendance} disabled={attendanceMarked || busy}>
-            {attendanceMarked ? 'Attendance marked' : 'Mark attendance'}
+            {attendanceMarked ? 'Checked in' : 'Check in'}
           </Button>
         </Card.Body>
       </Card>
@@ -154,7 +154,7 @@ export default function DesignerDashboard() {
                 <Card key={u.id} className="mb-2 border">
                   <Card.Body>
                     <div className="fw-semibold">{u.site_name || `Site #${u.site_id}`}</div>
-                    <div className="small text-muted mb-2">By {u.updated_by_name || 'User'}</div>
+                    <div className="small text-muted mb-2">By {u.updated_by_name || 'Supervisor'}</div>
                     <div className="small mb-3">{u.update_description || 'No description'}</div>
                     <div className="d-flex flex-wrap gap-2">
                       <Button size="sm" variant="outline-success" disabled={busy} onClick={() => reviewUpdate(u.id, 'approved')}>

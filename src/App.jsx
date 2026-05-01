@@ -1,6 +1,6 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { getDefaultPath, ROLE_IDS } from './constants/roles';
+import { getDefaultPath, isWebAccessBlockedRole, ROLE_IDS } from './constants/roles';
 import Login from './pages/Login';
 import SuperAdminLayout from './layouts/SuperAdminLayout';
 import RoleLayout from './layouts/RoleLayout';
@@ -24,6 +24,7 @@ import AdminOrders from './pages/admin/Orders';
 import AdminTasks from './pages/admin/Tasks';
 import AdminOrderDetails from './pages/admin/OrderDetails';
 import AdminMaterials from './pages/admin/Materials';
+import AdminComplaints from './pages/admin/Complaints';
 import SuperAdminMaterials from './pages/superadmin/Materials';
 import AdminTransactions from './pages/admin/Transactions';
 import AdminAttendance from './pages/admin/Attendance';
@@ -37,9 +38,11 @@ import VendorDashboard from './pages/vendor/Dashboard';
 import VendorSites from './pages/vendor/Sites';
 import VendorSiteDetails from './pages/vendor/SiteDetails';
 import VendorOrders from './pages/vendor/Orders';
+import NoWebAccess from './pages/NoWebAccess';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) {
     return (
       <div className="d-flex align-items-center justify-content-center min-vh-100">
@@ -48,6 +51,9 @@ function PrivateRoute({ children }) {
     );
   }
   if (!user) return <Navigate to="/login" replace />;
+  if (isWebAccessBlockedRole(user?.user_role_id) && location.pathname !== '/no-web-access') {
+    return <Navigate to="/no-web-access" replace />;
+  }
   return children;
 }
 
@@ -68,6 +74,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/no-web-access" element={<PrivateRoute><NoWebAccess /></PrivateRoute>} />
 
       <Route path="/" element={<PrivateRoute><HomeRedirect /></PrivateRoute>} />
 
@@ -114,6 +121,7 @@ function AppRoutes() {
         <Route path="staff" element={<AdminStaff />} />
         <Route path="attendance" element={<AdminAttendance />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="complaints" element={<AdminComplaints />} />
         <Route path="material-requests" element={<AdminOrders />} />
         <Route path="tasks" element={<AdminTasks />} />
         <Route path="orders/:orderId" element={<AdminOrderDetails />} />

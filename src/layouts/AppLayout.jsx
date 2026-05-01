@@ -39,10 +39,10 @@ export default function AppLayout({ navLinks, basePath, roleLabel }) {
           to={basePath}
           className="app-layout-brand-link"
           onClick={() => setSidebarOpen(false)}
-          aria-label="Sitebox home"
+          aria-label="SiteBox home"
         >
           <span className="app-layout-brand-mark">
-            <img src="/sitebox.jpeg" alt="Sitebox" className="app-layout-brand-logo" width="72" height="72" />
+            <img src="/sitebox.jpeg" alt="SiteBox" className="app-layout-brand-logo" width="72" height="72" />
           </span>
         </NavLink>
       </div>
@@ -69,20 +69,6 @@ export default function AppLayout({ navLinks, basePath, roleLabel }) {
       <aside className={`app-layout-sidebar d-none d-lg-block${sidebarCollapsed ? ' collapsed' : ''}`}>
         <SideNavContent />
       </aside>
-
-      {/* Mobile sidebar toggle */}
-      <div className="d-lg-none app-layout-mobile-header">
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          className="me-2"
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Open menu"
-        >
-          ☰
-        </Button>
-        <span className="app-layout-mobile-title">{currentLabel}</span>
-      </div>
 
       {/* Mobile offcanvas sidebar */}
       <Offcanvas show={sidebarOpen} onHide={() => setSidebarOpen(false)} placement="start" className="app-layout-offcanvas">

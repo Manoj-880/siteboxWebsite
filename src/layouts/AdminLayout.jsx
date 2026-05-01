@@ -7,6 +7,7 @@ const ADMIN_NAV = [
   { to: '/admin/attendance', end: true, label: 'Attendance' },
   { to: '/admin/materials', end: true, label: 'Materials' },
   { to: '/admin/orders', end: true, label: 'Orders' },
+  { to: '/admin/complaints', end: true, label: 'Complaints' },
   { to: '/admin/tasks', end: true, label: 'Tasks' },
   { to: '/admin/payments', end: true, label: 'Payments' },
   { to: '/admin/transactions', end: true, label: 'Transactions' },

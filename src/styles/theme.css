@@ -1345,7 +1345,7 @@ a:hover {
   background-color: var(--sitex-bg-light);
 }
 .app-layout-sidebar {
-  width: 260px;
+  width: 212px;
   flex-shrink: 0;
   overflow: hidden;
   background-color: var(--sitex-appbar);
@@ -1359,7 +1359,7 @@ a:hover {
   border-right-color: transparent;
 }
 .app-layout-brand {
-  padding: 1rem 1.25rem;
+  padding: 0.9rem 0.9rem;
   border-bottom: 1px solid var(--sitex-border-gray);
 }
 .app-layout-brand-link {
@@ -1404,7 +1404,7 @@ a:hover {
 }
 .app-layout-nav-link {
   display: block;
-  padding: 0.6rem 1.25rem;
+  padding: 0.58rem 0.9rem;
   color: var(--sitex-text-primary) !important;
   text-decoration: none;
   font-weight: 500;
@@ -1487,6 +1487,9 @@ a:hover {
 .app-layout-offcanvas .app-layout-offcanvas-inner {
   padding: 0.75rem 0;
 }
+.app-layout-offcanvas.offcanvas-start {
+  width: min(320px, 52vw) !important;
+}
 .app-layout-offcanvas .app-layout-brand {
   padding: 1rem 1.25rem;
 }
@@ -1496,8 +1499,8 @@ a:hover {
 .app-layout-offcanvas .app-layout-nav-link {
   padding: 0.6rem 1.25rem;
 }
-@media (max-width: 991.98px) {
-  .app-layout-main {
-    padding-top: 52px;
-  }
+.offcanvas-backdrop.show {
+  background-color: rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }

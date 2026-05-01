@@ -5,10 +5,10 @@ import { getDefaultPath } from '../constants/roles';
 import { Form, Button, Alert, InputGroup } from 'react-bootstrap';
 
 const PLATFORM_FEATURES = [
-  { label: 'Manage sites & employees', icon: '📍' },
-  { label: 'Site budgets & material orders', icon: '📋' },
-  { label: 'Employee attendance', icon: '✓' },
-  { label: 'Track site status daily', icon: '📊' },
+  { label: 'Manage multiple interior project sites from one dashboard', icon: '📍' },
+  { label: 'Track project budgets, spend, and client payments', icon: '📋' },
+  { label: 'Monitor attendance, payroll actions, and team productivity', icon: '✓' },
+  { label: 'Control material requests, orders, and delivery flow', icon: '📊' },
 ];
 
 export default function Login() {
@@ -43,13 +43,13 @@ export default function Login() {
       <div className="login-brand d-none d-md-flex align-items-center justify-content-center p-4 p-lg-5">
         <div className="login-brand-inner text-white text-start" style={{ maxWidth: '400px' }}>
           <p className="login-brand-badge mb-3 text-uppercase fw-semibold opacity-90" style={{ fontSize: '0.8rem', letterSpacing: '0.1em' }}>
-            For interior designing companies
+            Construction & interior project management
           </p>
           <h1 className="login-brand-title mb-3 fw-bold" style={{ fontSize: 'clamp(1.75rem, 4vw, 2.25rem)', lineHeight: 1.2 }}>
-            One platform to run your sites
+            Project management software for interior design companies
           </h1>
           <p className="login-brand-tagline mb-4 opacity-90" style={{ fontSize: '1.05rem', lineHeight: 1.5 }}>
-            Sitex helps you manage sites, teams, budgets, and orders—all in one place.
+            SiteBox helps construction and interior teams manage sites, staff, budgets, payments, material orders, and daily updates from one platform.
           </p>
           <ul className="login-feature-list list-unstyled mb-0">
             {PLATFORM_FEATURES.map((item, i) => (
@@ -81,12 +81,12 @@ export default function Login() {
                 <span className="fs-4 text-white fw-bold">S</span>
               </div>
               <div>
-                <h2 className="fw-bold mb-0" style={{ color: 'var(--sitex-text-primary)', fontSize: '1.35rem' }}>Sitex</h2>
-                <p className="small mb-0" style={{ color: 'var(--sitex-text-muted)' }}>For interior design companies</p>
+                <h2 className="fw-bold mb-0" style={{ color: 'var(--sitex-text-primary)', fontSize: '1.35rem' }}>SiteBox</h2>
+                <p className="small mb-0" style={{ color: 'var(--sitex-text-muted)' }}>Construction project management software</p>
               </div>
             </div>
             <p className="small mb-0" style={{ color: 'var(--sitex-text-muted)', lineHeight: 1.4 }}>
-              Manage sites, employees, budgets, material orders & attendance. Track site status.
+              Built for interior design and fit-out teams to manage projects, workforce attendance, budgets, payments, tasks, and materials.
             </p>
           </div>
 

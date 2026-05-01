@@ -68,6 +68,8 @@ const realSuperAdminApi = {
     api.put(`/companies/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   deleteCompany: (id) => api.delete(`/companies/${id}`),
   getCompanyOnboardingRequests: () => api.get('/superAdmin/company-onboarding-requests'),
+  updateCompanyOnboardingRequestStatus: (requestId, request_status) =>
+    api.put(`/superAdmin/company-onboarding-requests/${requestId}/status`, { request_status }),
   createAdmin: (data) => api.post('/admin/create', data),
   getUnits: () => api.get('/web/super-admin/get-units'),
   createUnit: (data) => api.post('/web/super-admin/add-units', data),
@@ -93,6 +95,7 @@ const realDashboardApi = {
   get: () => api.get('/dashboard'),
   getMonthlyUsersCount: () => api.get('/web/super-admin/get-monthly-users-count'),
   getDashboardData: () => api.get('/web/super-admin/dashboard-data'),
+  getAnalyticsData: () => api.get('/web/super-admin/analytics-data'),
 };
 
 const realRolesApi = {
@@ -145,6 +148,12 @@ const realAdminApi = {
   addClientTransaction: (siteId, amount) => api.post(`/admin/payments/clients/${siteId}/transactions`, { amount }),
   getTransactions: (params) => api.get('/admin/transactions', { params }),
   getUpdates: () => api.get('/admin/updates'),
+  getSiteComplaints: (params = {}) => api.get('/admin/site-complaints', { params }),
+  createSiteComplaint: (formData) =>
+    api.post('/admin/site-complaints', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  updateSiteComplaint: (complaintId, body) => api.put(`/admin/site-complaints/${complaintId}`, body),
   getTasksWeb: () => api.get('/admin/tasks/web'),
   createTaskWeb: (body) => api.post('/admin/tasks/web', body),
   getVendorOrders: () => api.get('/vendor/orders'),

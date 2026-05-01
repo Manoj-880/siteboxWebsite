@@ -154,6 +154,67 @@ export const dummyAdminDashboard = {
     { id: 3, site_name: 'Apartment Block B', supervisor_name: 'Amit Patel', message: 'Material delivery received. Inventory updated.', posted_at: '2026-01-28T17:00:00.000Z' },
     { id: 4, site_name: 'Sunrise Residency', supervisor_name: 'Sneha L', message: 'Painting started in units 101–105.', posted_at: '2026-01-28T14:00:00.000Z' },
   ],
+  analytics: {
+    overview: {
+      total_sites: 12,
+      active_sites: 9,
+      completed_sites: 3,
+      total_users: 45,
+      active_users: 39,
+      inactive_users: 6,
+      total_materials: 240,
+      total_material_requests: 86,
+      total_orders: 74,
+      total_tasks: 210,
+      completed_tasks: 128,
+      client_payments_received: 1245000,
+    },
+    users_by_role: [
+      { role_name: 'Supervisor', total: 12 },
+      { role_name: 'Designer', total: 8 },
+      { role_name: 'Contractor', total: 15 },
+      { role_name: 'Vendor', total: 10 },
+    ],
+    users_monthly: [
+      { month_key: '2025-09', count: 2 },
+      { month_key: '2025-10', count: 4 },
+      { month_key: '2025-11', count: 3 },
+      { month_key: '2025-12', count: 5 },
+      { month_key: '2026-01', count: 6 },
+    ],
+    sites_monthly: [
+      { month_key: '2025-09', count: 1 },
+      { month_key: '2025-10', count: 2 },
+      { month_key: '2025-11', count: 3 },
+      { month_key: '2025-12', count: 2 },
+      { month_key: '2026-01', count: 4 },
+    ],
+    requests_monthly: [
+      { month_key: '2025-09', count: 4 },
+      { month_key: '2025-10', count: 6 },
+      { month_key: '2025-11', count: 8 },
+      { month_key: '2025-12', count: 7 },
+      { month_key: '2026-01', count: 10 },
+    ],
+    orders_monthly: [
+      { month_key: '2025-09', count: 3 },
+      { month_key: '2025-10', count: 5 },
+      { month_key: '2025-11', count: 7 },
+      { month_key: '2025-12', count: 6 },
+      { month_key: '2026-01', count: 9 },
+    ],
+    attendance_by_role_today: [
+      { role_name: 'Supervisor', total: 12, present: 10, absent: 1, unmarked: 1 },
+      { role_name: 'Designer', total: 8, present: 6, absent: 1, unmarked: 1 },
+      { role_name: 'Contractor', total: 15, present: 11, absent: 2, unmarked: 2 },
+      { role_name: 'Vendor', total: 10, present: 8, absent: 1, unmarked: 1 },
+    ],
+    top_sites_by_tasks: [
+      { id: 1, site_name: 'Villa Project Alpha', tasks_count: 36 },
+      { id: 2, site_name: 'Green Valley Community', tasks_count: 31 },
+      { id: 3, site_name: 'Apartment Block B', tasks_count: 28 },
+    ],
+  },
 };
 
 // Admin payments (members flow like mobile)

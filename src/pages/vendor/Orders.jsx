@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Col, Form, Modal, Row, Spinner } from 'react-bootstrap';
+import { Alert, Badge, Button, Card, Col, Form, Modal, Row, Spinner } from 'react-bootstrap';
 import { vendorApi } from '../../api/axiosConfig';
 
 export default function VendorOrders() {
@@ -98,6 +98,14 @@ export default function VendorOrders() {
     return { created, taken, done };
   }, [orders]);
 
+  const statusVariant = (status) => {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'created') return 'warning';
+    if (normalized === 'taken') return 'info';
+    if (normalized === 'dispatched' || normalized === 'delivered') return 'success';
+    return 'secondary';
+  };
+
   if (loading) return <div className="text-center py-5"><Spinner animation="border" /></div>;
 
   const renderOrder = (o) => (
@@ -109,8 +117,13 @@ export default function VendorOrders() {
       style={{ cursor: 'pointer' }}
     >
       <Card.Body>
-        <div className="fw-semibold">{o.site_name || 'Site'}</div>
-        <div className="small text-muted">Order #{o.id} • Status: {o.order_status || '-'}</div>
+        <div className="d-flex justify-content-between align-items-start gap-2">
+          <div>
+            <div className="fw-semibold">{o.site_name || 'Site'}</div>
+            <div className="small text-muted">Order #{o.id}</div>
+          </div>
+          <Badge bg={statusVariant(o.order_status)} className="text-uppercase">{o.order_status || '-'}</Badge>
+        </div>
         <div className="small text-muted mb-2">Total: Rs {o.amount ?? 0}</div>
         {(o.items || []).length > 0 ? (
           <div className="small mb-2">{o.items.length} item(s)</div>
@@ -154,13 +167,13 @@ export default function VendorOrders() {
 
       <Row className="g-3">
         <Col md={4}>
-          <Card className="border-0 shadow-sm h-100"><Card.Body><h6>Created ({grouped.created.length})</h6>{grouped.created.length ? grouped.created.map(renderOrder) : <p className="small text-muted mb-0">No orders.</p>}</Card.Body></Card>
+          <Card className="border-0 shadow-sm h-100"><Card.Body><h6 className="mb-3 text-warning-emphasis">Created ({grouped.created.length})</h6>{grouped.created.length ? grouped.created.map(renderOrder) : <p className="small text-muted mb-0">No orders.</p>}</Card.Body></Card>
         </Col>
         <Col md={4}>
-          <Card className="border-0 shadow-sm h-100"><Card.Body><h6>Taken ({grouped.taken.length})</h6>{grouped.taken.length ? grouped.taken.map(renderOrder) : <p className="small text-muted mb-0">No orders.</p>}</Card.Body></Card>
+          <Card className="border-0 shadow-sm h-100"><Card.Body><h6 className="mb-3 text-info-emphasis">Taken ({grouped.taken.length})</h6>{grouped.taken.length ? grouped.taken.map(renderOrder) : <p className="small text-muted mb-0">No orders.</p>}</Card.Body></Card>
         </Col>
         <Col md={4}>
-          <Card className="border-0 shadow-sm h-100"><Card.Body><h6>Completed ({grouped.done.length})</h6>{grouped.done.length ? grouped.done.map(renderOrder) : <p className="small text-muted mb-0">No orders.</p>}</Card.Body></Card>
+          <Card className="border-0 shadow-sm h-100"><Card.Body><h6 className="mb-3 text-success-emphasis">Completed ({grouped.done.length})</h6>{grouped.done.length ? grouped.done.map(renderOrder) : <p className="small text-muted mb-0">No orders.</p>}</Card.Body></Card>
         </Col>
       </Row>
 

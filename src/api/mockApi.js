@@ -19,6 +19,38 @@ import {
 
 const delay = (ms = 300) => new Promise((r) => setTimeout(r, ms));
 
+const mockOnboardingRequests = [
+  {
+    id: 1,
+    company_name: 'Aurum Interiors',
+    contact_person: 'Neha Rao',
+    email: 'neha@auruminteriors.com',
+    mobile: '9876543210',
+    city: 'Hyderabad',
+    address: 'Banjara Hills, Hyderabad',
+    employee_count: 24,
+    notes: 'Looking for multi-project rollout and vendor tracking.',
+    request_status: 'pending',
+    created_at: new Date().toISOString(),
+  },
+];
+
+const mockSiteComplaints = [
+  {
+    id: 101,
+    site_id: 10,
+    site_name: 'Villa Site A',
+    subject: 'Delayed cement delivery',
+    message_body: 'Vendor delivery has slipped by 2 days.',
+    sent_by_user_id: 2,
+    sent_by_name: 'Admin User',
+    sent_by_role_name: 'admin',
+    record_status: 'active',
+    created_at: new Date().toISOString(),
+    files: [],
+  },
+];
+
 function buildMockMaterialsCatalogData() {
   return [
     {
@@ -168,24 +200,29 @@ const superAdminApi = {
       data: {
         success: true,
         data: {
-          requests: [
-            {
-              id: 1,
-              company_name: 'Aurum Interiors',
-              contact_person: 'Neha Rao',
-              email: 'neha@auruminteriors.com',
-              mobile: '9876543210',
-              city: 'Hyderabad',
-              address: 'Banjara Hills, Hyderabad',
-              employee_count: 24,
-              notes: 'Looking for multi-project rollout and vendor tracking.',
-              request_status: 'pending',
-              created_at: new Date().toISOString(),
-            },
-          ],
+          requests: [...mockOnboardingRequests],
         },
       },
     })),
+  updateCompanyOnboardingRequestStatus: (requestId, request_status) =>
+    delay().then(() => {
+      const idx = mockOnboardingRequests.findIndex((r) => Number(r.id) === Number(requestId));
+      if (idx === -1) return Promise.reject({ response: { data: { message: 'Request not found' } } });
+      mockOnboardingRequests[idx] = {
+        ...mockOnboardingRequests[idx],
+        request_status: String(request_status || '').toLowerCase() || 'pending',
+      };
+      return {
+        data: {
+          success: true,
+          message: 'Request status updated successfully',
+          data: {
+            id: Number(requestId),
+            request_status: mockOnboardingRequests[idx].request_status,
+          },
+        },
+      };
+    }),
   createAdmin: () =>
     delay().then(() => ({
       data: {
@@ -269,6 +306,69 @@ const dashboardApi = {
         success: true,
         message: 'Monthly users count retrieved successfully',
         data: [...dummyMonthlyUsersCount],
+      },
+    })),
+  getAnalyticsData: () =>
+    delay().then(() => ({
+      data: {
+        success: true,
+        data: {
+          overview: {
+            total_companies: 6,
+            active_companies: 4,
+            onboarding_companies: 1,
+            delete_requested_companies: 1,
+            total_users_all: 132,
+            total_users: 130,
+            active_users: 118,
+            inactive_users: 12,
+            total_sites: 94,
+            total_materials: 240,
+            pending_material_submissions: 6,
+            total_material_requests: 420,
+            total_orders: 365,
+            total_tasks: 1280,
+          },
+          users_by_role: [
+            { role_name: 'Supervisor', total: 38 },
+            { role_name: 'Contractor', total: 34 },
+            { role_name: 'Vendor', total: 28 },
+            { role_name: 'Designer', total: 30 },
+          ],
+          company_status_breakdown: { active: 4, onboarding: 1, delete_requested: 1 },
+          users_monthly: dummyMonthlyUsersCount.map((r) => ({ month_key: `${r.year}-${String(r.month).padStart(2, '0')}`, count: r.monthly_users })),
+          companies_monthly: [
+            { month_key: '2025-09', count: 0 },
+            { month_key: '2025-10', count: 1 },
+            { month_key: '2025-11', count: 1 },
+            { month_key: '2025-12', count: 0 },
+            { month_key: '2026-01', count: 2 },
+          ],
+          materials_monthly: [
+            { month_key: '2025-09', count: 8 },
+            { month_key: '2025-10', count: 14 },
+            { month_key: '2025-11', count: 17 },
+            { month_key: '2025-12', count: 21 },
+            { month_key: '2026-01', count: 26 },
+          ],
+          material_submissions_monthly: [
+            { month_key: '2025-09', count: 2 },
+            { month_key: '2025-10', count: 5 },
+            { month_key: '2025-11', count: 4 },
+            { month_key: '2025-12', count: 3 },
+            { month_key: '2026-01', count: 6 },
+          ],
+          material_submission_status: [
+            { status: 'approved', count: 28 },
+            { status: 'pending', count: 6 },
+            { status: 'rejected', count: 3 },
+          ],
+          top_companies_by_users: [
+            { id: 1, company_name: 'Walle', users_count: 24 },
+            { id: 2, company_name: 'TVS', users_count: 21 },
+            { id: 3, company_name: 'SM Interiors', users_count: 18 },
+          ],
+        },
       },
     })),
 };
@@ -459,6 +559,61 @@ const adminApi = {
     delay().then(() => ({
       data: { success: true, data: { updates: [...dummyAdminUpdates] } },
     })),
+  getSiteComplaints: () =>
+    delay().then(() => ({
+      data: {
+        success: true,
+        data: {
+          complaints: [...mockSiteComplaints],
+        },
+      },
+    })),
+  createSiteComplaint: (formData) =>
+    delay().then(() => {
+      const nextId = Date.now();
+      const siteId = Number(formData.get('site_id') || 0);
+      const subject = String(formData.get('subject') || '').trim() || 'Complaint';
+      const messageBody = String(formData.get('message_body') || '').trim();
+      const row = {
+        id: nextId,
+        site_id: siteId,
+        site_name: siteId ? `Site #${siteId}` : 'Unknown Site',
+        subject,
+        message_body: messageBody || null,
+        sent_by_user_id: 2,
+        sent_by_name: 'Admin User',
+        sent_by_role_name: 'admin',
+        record_status: 'active',
+        created_at: new Date().toISOString(),
+        files: [],
+      };
+      mockSiteComplaints.unshift(row);
+      return {
+        data: {
+          success: true,
+          message: 'Site complaint created successfully',
+          data: { complaint: row },
+        },
+      };
+    }),
+  updateSiteComplaint: (complaintId, body = {}) =>
+    delay().then(() => {
+      const idx = mockSiteComplaints.findIndex((c) => Number(c.id) === Number(complaintId));
+      if (idx === -1) return Promise.reject({ response: { data: { message: 'Complaint not found' } } });
+      mockSiteComplaints[idx] = {
+        ...mockSiteComplaints[idx],
+        ...(body.subject != null ? { subject: String(body.subject).trim() } : {}),
+        ...(body.message_body !== undefined ? { message_body: body.message_body || null } : {}),
+        ...(body.record_status ? { record_status: body.record_status } : {}),
+      };
+      return {
+        data: {
+          success: true,
+          message: 'Site complaint updated successfully',
+          data: { complaint: mockSiteComplaints[idx] },
+        },
+      };
+    }),
   getTasksWeb: () =>
     delay().then(() => ({
       data: {

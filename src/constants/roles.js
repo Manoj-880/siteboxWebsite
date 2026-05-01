@@ -27,6 +27,8 @@ export const ROLE_PATHS = {
   [ROLE_IDS.VENDOR]: '/vendor',
 };
 
+export const WEB_BLOCKED_ROLE_IDS = [ROLE_IDS.SUPERVISOR, ROLE_IDS.CONTRACTOR];
+
 export const ROLE_NAMES = {
   [ROLE_IDS.SUPER_ADMIN]: 'Super Admin',
   [ROLE_IDS.ADMIN]: 'Admin',
@@ -89,7 +91,12 @@ export function getRoleAccess(roleId) {
 export function getDefaultPath(user) {
   const roleId = user?.user_role_id;
   if (roleId == null) return '/login';
+  if (WEB_BLOCKED_ROLE_IDS.includes(roleId)) return '/no-web-access';
   return ROLE_PATHS[roleId] ?? '/login';
+}
+
+export function isWebAccessBlockedRole(roleId) {
+  return WEB_BLOCKED_ROLE_IDS.includes(roleId);
 }
 
 /**
