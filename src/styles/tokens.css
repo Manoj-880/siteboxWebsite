@@ -1,0 +1,42 @@
+/* SiteBox Pulse — marketing tokens (matches mobile + webapp) */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --sb-jet: #0a0a0a;
+  --sb-jet-mid: #171717;
+  --sb-jet-light: #2a2a2a;
+  --sb-lime: #d1e105;
+  --sb-lime-soft: #f3f8c4;
+  --sb-lime-ink: #4a5200;
+  --sb-white: #ffffff;
+  --sb-bg: #fafafa;
+  --sb-zinc: #f4f4f5;
+  --sb-border: #e4e4e7;
+  --sb-text: #0a0a0a;
+  --sb-text-2: #3f3f46;
+  --sb-muted: #71717a;
+  --sb-success: #16a34a;
+  --sb-danger: #dc2626;
+
+  --sb-radius: 10px;
+  --sb-radius-sm: 6px;
+  --sb-radius-lg: 16px;
+
+  --sb-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --sb-duration: 160ms;
+  --sb-duration-slow: 700ms;
+
+  --font-display: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  --nav-h: 64px;
+  --max: 1120px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --sb-duration: 0ms;
+    --sb-duration-slow: 0ms;
+  }
+}

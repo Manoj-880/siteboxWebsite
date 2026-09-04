@@ -1,45 +1,46 @@
-# SiteX Webapp
+# SiteBox Marketing Website
 
-Admin web application for SiteX (Super Admin, Admin, Designer roles). Built with React, Vite, Bootstrap, and Axios.
+Public marketing site for **SiteBox** — construction & interior operations platform.
+Matches the Sitebox Pulse brand used in mobile + admin web (jet `#0A0A0A` + lime `#D1E105`).
 
-## Setup
+## Stack
+
+- React 18 + Vite
+- CSS-native motion (no animation library)
+- Mobile-first responsive layout
+
+## Develop
 
 ```bash
 npm install
-```
-
-## Development
-
-```bash
 npm run dev
 ```
 
-Runs at `http://localhost:5173`. API requests are proxied to `http://localhost:3000` (configure in `vite.config.js`). Ensure `sitex_server` is running.
+Runs at **http://localhost:5174** (so it can sit beside the admin webapp on `5173`).
 
 ## Build
 
 ```bash
 npm run build
-npm run preview   # preview production build
+npm run preview
 ```
 
-## Environment
+## Env
 
-- `VITE_API_URL`: API base URL (default: `/api` when using dev proxy).
+Optional in `.env`:
 
-## Roles (current)
+```
+VITE_PORTAL_URL=https://testapp.getsitebox.com
+```
 
-- **Super Admin**: Dashboard, Companies (CRUD + delete), Create Admins, Units (create/list).
-- **Admin** (planned): Company sites, employees, materials, material requests, orders, attendance, site status.
-- **Designer** (planned): TBD.
+Used for “Open portal” CTAs.
 
-## Responsive breakpoints
+## Content map
 
-- &lt; 400px: extra small mobile
-- 400px–575px: mobile
-- 576px–767px: tablet
-- 768px–991px: laptop
-- 992px–1199px: desktop
-- 1200px+: TV and larger
-
-Uses Bootstrap 5 grid and utilities; custom breakpoints in `src/styles/breakpoints.css`.
+| Section | Purpose |
+|--------|---------|
+| Hero | Brand-first SiteBox + command-center promise |
+| Features | Command center, sites, attendance, tasks/updates, materials/orders, payments |
+| Roles | Admin/Designer web vs Supervisor/Vendor/Contractor/Factory mobile |
+| How it works | Onboard → sites/team → operate |
+| Demo | Mailto demo request + portal link |
