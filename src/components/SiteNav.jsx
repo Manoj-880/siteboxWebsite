@@ -51,7 +51,8 @@ export default function SiteNav() {
     <header className={`site-nav ${scrolled ? 'is-scrolled' : 'is-top'}${open ? ' is-open' : ''}`}>
       <div className="site-nav__inner">
         <a href="#top" className="site-nav__brand" aria-label="SiteBox home" onClick={() => setOpen(false)}>
-          <img src="/sitebox.jpeg" alt="" className="site-nav__logo" width="32" height="32" />
+          <img src="/sitebox-mark-white.png" alt="" className="site-nav__logo site-nav__logo--on-dark" width="32" height="32" />
+          <img src="/sitebox-mark-black.png" alt="" className="site-nav__logo site-nav__logo--on-light" width="32" height="32" />
           <span className="site-nav__brand-text">
             Site<span className="site-nav__brand-accent">Box</span>
           </span>

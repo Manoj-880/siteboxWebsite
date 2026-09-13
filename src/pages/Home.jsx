@@ -228,7 +228,7 @@ export default function Home() {
               Live on web + mobile
             </p>
             <h1 className="hero__brand">
-              Site<span>Box</span>
+              <img src="/sitebox-wordmark-white.png" alt="SiteBox" />
             </h1>
             <p className="hero__headline">Run every site like a command center.</p>
             <p className="hero__sub">

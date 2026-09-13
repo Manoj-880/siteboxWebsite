@@ -53,7 +53,7 @@ export default function SiteFooter() {
       <div className="container site-footer__grid">
         <div className="site-footer__brand-col">
           <a href="#top" className="site-footer__brand">
-            <img src="/sitebox.jpeg" alt="" width="36" height="36" />
+            <img src="/sitebox-mark-white.png" alt="" width="36" height="36" />
             <span>
               Site<span className="site-footer__brand-accent">Box</span>
             </span>

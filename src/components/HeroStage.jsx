@@ -32,7 +32,10 @@ export default function HeroStage() {
 
       <div className="hero-panel">
         <div className="hero-panel__top">
-          <span className="hero-panel__brand">SiteBox</span>
+          <span className="hero-panel__brand">
+            <img src="/sitebox-mark-white.png" alt="" width="18" height="18" />
+            SiteBox
+          </span>
           <span className="hero-panel__pill">Command</span>
         </div>
         <div className="hero-panel__kpis">
